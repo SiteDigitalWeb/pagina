@@ -1,11 +1,11 @@
 <?php
-namespace DigitalsiteSaaS\Pagina\Http;
+namespace Sitedigitalweb\Pagina\Http;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use DigitalsiteSaaS\Pagina\Page;
-use DigitalsiteSaaS\Pagina\Cms_Recaptcha;
+use Sitedigitalweb\Pagina\Page;
+use Sitedigitalweb\Pagina\Cms_Recaptcha;
 use DB;
 
 
@@ -23,10 +23,10 @@ public function preview($id)
     // Verificar si estamos en un tenant o en el sistema central
     if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
         // Entorno tenant específico
-        $template = \DigitalsiteSaaS\Pagina\Tenant\Page::where('id', $id)
+        $template = \Sitedigitalweb\Pagina\Tenant\Page::where('id', $id)
             ->where('website_id', $website->id)
             ->firstOrFail();
-        $recaptcha = \DigitalsiteSaaS\Pagina\Tenant\Cms_Recaptcha::first();
+        $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
     } else {
         // Entorno central (host)
         $template = Page::findOrFail($id);
@@ -58,7 +58,7 @@ public function page()
     $website = app(\Hyn\Tenancy\Environment::class)->website();
 
     // Determinar el modelo a usar según el contexto
-    $pageModel = $website ? \DigitalsiteSaaS\Pagina\Tenant\Page::class : Page::class;
+    $pageModel = $website ? \Sitedigitalweb\Pagina\Tenant\Page::class : Page::class;
 
     // Buscar la página de inicio
     $template = $pageModel::where('slug', '/')
@@ -89,7 +89,7 @@ public function pages($page)
     $website = app(\Hyn\Tenancy\Environment::class)->website();
     
     // Determinar el modelo correcto según el contexto
-    $pageModel = $website ? \DigitalsiteSaaS\Pagina\Tenant\Page::class : Page::class;
+    $pageModel = $website ? \Sitedigitalweb\Pagina\Tenant\Page::class : Page::class;
     
     // Construir la consulta base
     $query = $pageModel::where('slug', $page);
@@ -663,7 +663,7 @@ private function isJson($string)
     ];
 
     $website = app(\Hyn\Tenancy\Environment::class)->website();
-    $pageModel = $website ? \DigitalsiteSaaS\Pagina\Tenant\Page::class : Page::class;
+    $pageModel = $website ? \Sitedigitalweb\Pagina\Tenant\Page::class : Page::class;
 
     $template = $website
     ? $pageModel::forWebsite($website)->updateOrCreate(
@@ -689,7 +689,7 @@ public function load($id)
     $website = app(\Hyn\Tenancy\Environment::class)->website();
     
     // Determinar el modelo correcto según el contexto
-    $pageModel = $website ? \DigitalsiteSaaS\Pagina\Tenant\Page::class : Page::class;
+    $pageModel = $website ? \Sitedigitalweb\Pagina\Tenant\Page::class : Page::class;
     
     // Construir la consulta base
     $query = $pageModel::where('id', $id);
@@ -997,7 +997,7 @@ if(!$this->tenantName){
   'image' => $uploadDirsave
  ]);
 }else{
-\DigitalsiteSaaS\Pagina\Tenant\GrapeImage::insert([
+\Sitedigitalweb\Pagina\Tenant\GrapeImage::insert([
   'image' => $uploadDirsave
  ]);
 }
