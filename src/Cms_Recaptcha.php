@@ -1,6 +1,6 @@
 <?php
 
-namespace DigitalsiteSaaS\Pagina;
+namespace Sitedigitalweb\Pagina;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
