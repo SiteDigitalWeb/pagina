@@ -153,7 +153,7 @@ Route::post('/whatsapp-track', [DigitalsiteSaaS\Pagina\Http\WebController::class
 Route::get('robots.txt', 'DigitalsiteSaaS\Pagina\Http\WebController@robot');
 
 Route::post('/registroq', [DigitalsiteSaaS\Pagina\Http\WebController::class, 'submitForm'])->name('registros');
- Route::post('cms/registro', 'DigitalsiteSaaS\Pagina\Http\WebController@submitForm');
+ Route::post('cms/registro', 'Sitedigitalweb\Pagina\Http\WebController@submitForm');
 
  Route::get('mensajes/estadisticas', 'DigitalsiteSaaS\Pagina\Http\WebController@estadistica');
 });
