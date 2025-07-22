@@ -1,11 +1,11 @@
 <?php
 
- namespace DigitalsiteSaaS\Pagina\Http;
- use DigitalsiteSaaS\Pagina\Page;
- use DigitalsiteSaaS\Pagina\Estadistica;
- use DigitalsiteSaaS\Pagina\WhatsappClick;
- use DigitalsiteSaaS\Pagina\Forms;
-  use DigitalsiteSaaS\Pagina\Ips;
+ namespace Sitedigitalweb\Pagina\Http;
+ use Sitedigitalweb\Pagina\Page;
+ use Sitedigitalweb\Pagina\Estadistica;
+ use Sitedigitalweb\Pagina\WhatsappClick;
+ use Sitedigitalweb\Pagina\Forms;
+ use Sitedigitalweb\Pagina\Ips;
  use App\Models\RecaptchaSetting;
  use Mail;
  use DB;
@@ -20,7 +20,7 @@
  use Illuminate\Http\Request;
  use Validator;
  use Response;
- use DigitalsiteSaaS\Avanza\Avanzaempresa;
+ use Sitedigitalweb\Avanza\Avanzaempresa;
  use App\Http\Requests\FormularioFormRequest;
  use Auth;
  use Carbon\Carbon;
@@ -29,7 +29,7 @@
  use Hyn\Tenancy\Repositories\HostnameRepository;
  use Hyn\Tenancy\Repositories\WebsiteRepository;
  use GuzzleHttp\Client;
-use DigitalsiteSaaS\Pagina\Cms_Recaptcha;
+use Sitedigitalweb\Pagina\Cms_Recaptcha;
  use App\Http\ConnectionsHelper;
  use URL;
 
@@ -94,7 +94,7 @@ public function trackClick(Request $request) {
                 'medium' => $request->input('medium', 'Desconocido'),
             ]);
             }else{
-              \DigitalsiteSaaS\Pagina\Tenant\WhatsappClick::create([
+              \Sitedigitalweb\Pagina\Tenant\WhatsappClick::create([
                 'slug' => $request->input('slug', 'Desconocido'),
                 'utm_source' => $request->input('utm_source', 'Desconocido'),
                 'utm_medium' => $request->input('utm_medium', 'Desconocido'),
@@ -117,7 +117,7 @@ public function trackClick(Request $request) {
 
      // Verificar si estamos en un tenant o en el sistema central
     if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
-        $recaptcha = \DigitalsiteSaaS\Pagina\Tenant\Cms_Recaptcha::first();
+        $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
     } else {
         // Entorno central (host)
         $recaptcha = Cms_Recaptcha::first();
@@ -187,13 +187,13 @@ public function trackClick(Request $request) {
     if(!$this->tenantName){
    $user = Ips::where('ip', Input::get('ip'))->first();
     }else{
-    $user = \DigitalsiteSaaS\Pagina\Tenant\Ips::where('ip', Input::get('ip'))->first();
+    $user = \Sitedigitalweb\Pagina\Tenant\Ips::where('ip', Input::get('ip'))->first();
     } 
    if ($user){} else{
    if(!$this->tenantName){
    $pagina = new Estadistica;
    }else{
-   $pagina = new \DigitalsiteSaaS\Pagina\Tenant\Estadistica;
+   $pagina = new \Sitedigitalweb\Pagina\Tenant\Estadistica;
    }
    $pagina->ip = Input::get('ip');
    $pagina->host = Input::get('host');
