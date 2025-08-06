@@ -16,14 +16,19 @@ Route::get('/templates/{id}', [Sitedigitalweb\Pagina\Http\TemplateController::cl
 Route::get('/editor/components', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'getComponents']);
 Route::post('/upload', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'upload'])->name('upload');
 
+Route::resource('utm', Sitedigitalweb\Pagina\Http\UtmController::class);
+Route::get('register-tenant', 'Sitedigitalweb\Pagina\Http\TenantController@register');
+Route::post('create', 'Sitedigitalweb\Pagina\Http\TenantController@create');
+Route::resource('recaptcha', Sitedigitalweb\Pagina\Http\RecaptchaSettingController::class);
+
 Route::get('/grape-components', function () {
-  $template = 'buyer';
+  $template = 'juanchaproducciones';
   $componentsPath = resource_path('views/'.$template);
   $files = glob($componentsPath . '/*.blade.php');
   $components = [];
   foreach ($files as $file) {
    $name = basename($file, '.blade.php');
-   $html = view("buyer.$name")->render();
+   $html = view("juanchaproducciones.$name")->render();
    $components[] = [
     'id' => $name,
     'label' => ucfirst(str_replace('-', ' ', $name)),
@@ -37,9 +42,9 @@ Route::get('/grape-components', function () {
  Route::get('gestion/logo-head', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@logohead');
 
 
-Route::get('components', [DigitalsiteSaaS\Pagina\Http\GrapejsController::class, 'getComponents'])->name('components.get');
+Route::get('components', [Sitedigitalweb\Pagina\Http\GrapejsController::class, 'getComponents'])->name('components.get');
 
-Route::post('save-component', [DigitalsiteSaaS\Pagina\Http\GrapejsController::class, 'store'])->name('components.store');
+Route::post('save-component', [Sitedigitalweb\Pagina\Http\GrapejsController::class, 'store'])->name('components.store');
 
 
 });
@@ -52,13 +57,13 @@ Route::post('save-component', [DigitalsiteSaaS\Pagina\Http\GrapejsController::cl
 
 Route::prefix('images')->group(function () {
     // Ruta para subir una o varias imágenes
-    Route::post('/upload', ['App\Http\Controllers\ImageController', 'upload'])->name('images.upload');
+    Route::post('/upload', ['Sitedigitalweb\Pagina\Http\ImageController', 'upload'])->name('images.upload');
 
     // Ruta para listar todas las imágenes guardadas
-    Route::get('/list', ['App\Http\Controllers\ImageController', 'index'])->name('images.index');
+    Route::get('/list', ['Sitedigitalweb\Pagina\Http\ImageController', 'index'])->name('images.index');
 
     // Ruta para eliminar una imagen
-    Route::delete('/delete', ['App\Http\Controllers\ImageController', 'destroy'])->name('images.destroy');
+    Route::delete('/delete', ['Sitedigitalweb\Pagina\Http\ImageController', 'destroy'])->name('images.destroy');
 });
 
 
@@ -66,8 +71,6 @@ Route::prefix('images')->group(function () {
 Route::group(['middleware' => ['auth','administrador']], function (){
 Route::resource('/gestor/ver-templates', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController');
 
- Route::get('sd/register-tenant', 'DigitalsiteSaaS\Pagina\Http\TenantController@register');
- Route::post('sd/create', 'DigitalsiteSaaS\Pagina\Http\TenantController@create');
 Route::get('/gestor/ver-config/publico', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@publico');
 Route::get('/gestor/ver-config/privado', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@privado');
 Route::get('/gestor/planes-saas', 'DigitalsiteSaaS\Pagina\Http\SuscripcionController@planessaas');
@@ -155,7 +158,7 @@ Route::get('robots.txt', 'DigitalsiteSaaS\Pagina\Http\WebController@robot');
 Route::post('/registroq', [DigitalsiteSaaS\Pagina\Http\WebController::class, 'submitForm'])->name('registros');
  Route::post('cms/registro', 'Sitedigitalweb\Pagina\Http\WebController@submitForm');
 
- Route::get('mensajes/estadisticas', 'DigitalsiteSaaS\Pagina\Http\WebController@estadistica');
+ Route::get('mensajes/estadisticas', 'Sitedigitalweb\Pagina\Http\WebController@estadistica');
 });
 
 

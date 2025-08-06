@@ -1,11 +1,11 @@
 <?php
 
-namespace DigitalsiteSaaS\Pagina;
+namespace Sitedigitalweb\Pagina;
 
 use Illuminate\Database\Eloquent\Model;
 
 
-class Forms extends Model
+class Cms_Forms extends Model
 
 {
     protected $table = 'cms_forms';

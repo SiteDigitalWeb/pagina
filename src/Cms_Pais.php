@@ -1,9 +1,9 @@
 <?php
 
-namespace DigitalsiteSaaS\Pagina;
+namespace Sitedigitalweb\Pagina;
 use Illuminate\Database\Eloquent\Model;
 
-class Pais extends Model{
+class Cms_Pais extends Model{
  protected $table = 'cms_paises';
  public $timestamps = false;
 }

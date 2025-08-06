@@ -1,6 +1,6 @@
 <?php
 
-namespace DigitalsiteSaaS\Pagina\Http;
+namespace Sitedigitalweb\Pagina\Http;
 use App\Providers\RouteServiceProvider;
 
 
@@ -27,7 +27,7 @@ use DB;
 use Mail;
 use DigitalsiteSaaS\Usuario\Usuario;
 use Auth;
-use DigitalsiteSaaS\Pagina\Pais;
+use Sitedigitalweb\Pagina\Cms_Pais;
 
 
 class TenantController extends Controller{
@@ -120,8 +120,8 @@ protected $tenantName = null;
 
  public function register(){
   $paises = ($this->tenantName 
-    ? \DigitalsiteSaaS\Pagina\Tenant\Pais::query()
-    : Pais::query())
+    ? \Sitedigitalweb\Pagina\Tenant\Cms_Pais::query()
+    : Cms_Pais::query())
     ->orderBy('pais') // o el campo que uses
     ->get();
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace DigitalsiteSaaS\Pagina\Http;
+namespace Sitedigitalweb\Pagina\Http;
 use App\Http\Controllers\Controller;
 use DigitalsiteSaaS\Pagina\Page;
 use DigitalsiteSaaS\Pagina\Gratemplates;

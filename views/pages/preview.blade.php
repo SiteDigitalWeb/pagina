@@ -7,7 +7,7 @@
     <title>Vista Previa: {{ $template->name }}</title>
 
     {{-- Incluir estilos y scripts externos --}}
-    @include('buyer.assets-web.assets-preview')
+    @include($web->template . '.assets-web.assets-preview')
 
     {{-- Estilos personalizados inyectados desde GrapesJS --}}
       <link
@@ -38,6 +38,8 @@
             border-radius: 4px;
             font-weight: bold;
         }
+
+        
 
         /* Aquí se mantienen tus estilos personalizados como los del carrusel, collapses, etc. */
         /* Los puedes dejar tal como los tenías o separarlos en otro archivo si lo deseas */

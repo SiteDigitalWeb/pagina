@@ -2,10 +2,10 @@
 
  namespace Sitedigitalweb\Pagina\Http;
  use Sitedigitalweb\Pagina\Page;
- use Sitedigitalweb\Pagina\Estadistica;
+ use Sitedigitalweb\Pagina\Cms_Stadistics;
  use Sitedigitalweb\Pagina\WhatsappClick;
- use Sitedigitalweb\Pagina\Forms;
- use Sitedigitalweb\Pagina\Ips;
+ use Sitedigitalweb\Pagina\Cms_Forms;
+ use Sitedigitalweb\Pagina\Cms_Ips;
  use App\Models\RecaptchaSetting;
  use Mail;
  use DB;
@@ -29,7 +29,7 @@
  use Hyn\Tenancy\Repositories\HostnameRepository;
  use Hyn\Tenancy\Repositories\WebsiteRepository;
  use GuzzleHttp\Client;
-use Sitedigitalweb\Pagina\Cms_Recaptcha;
+ use Sitedigitalweb\Pagina\Cms_Recaptcha;
  use App\Http\ConnectionsHelper;
  use URL;
 
@@ -72,13 +72,6 @@ private function subtotal(){
  }}
  return $subtotal;
 }
-
-
-
-
-
-
-
 
 
 
@@ -175,7 +168,7 @@ public function trackClick(Request $request) {
     ]);
 
     // 3. Guardar
-    Forms::create($validated);
+    Cms_Forms::create($validated);
 
     // 4. Redirigir con éxito
     return back()->with('success', '¡Formulario enviado correctamente!');
@@ -183,42 +176,55 @@ public function trackClick(Request $request) {
 
 
 
-  public function estadistica(){
-    if(!$this->tenantName){
-   $user = Ips::where('ip', Input::get('ip'))->first();
-    }else{
-    $user = \Sitedigitalweb\Pagina\Tenant\Ips::where('ip', Input::get('ip'))->first();
-    } 
-   if ($user){} else{
-   if(!$this->tenantName){
-   $pagina = new Estadistica;
-   }else{
-   $pagina = new \Sitedigitalweb\Pagina\Tenant\Estadistica;
-   }
-   $pagina->ip = Input::get('ip');
-   $pagina->host = Input::get('host');
-   $pagina->navegador = Input::get('navegador');
-   $pagina->referido = Input::get('referido');
-   $pagina->ciudad = Input::get('ciudad');
-   $pagina->pais = Input::get('pais');
-   $pagina->pagina = Input::get('pagina');
-   $pagina->mes = Input::get('mes');
-   $pagina->ano = Input::get('ano');
-   $pagina->hora = Input::get('hora');
-   $pagina->dia = Input::get('dia');
-   $pagina->idioma = Input::get('idioma');
-   $pagina->cp = Input::get('cp');
-   $pagina->longitud = Input::get('longitud');
-   $pagina->latitud = Input::get('latitud');
-   $pagina->fecha = Input::get('fecha');
-   $pagina->cp = Input::get('meses');
-   $pagina->utm_medium = Input::get('utm_medium');
-   $pagina->utm_source = Input::get('utm_source');
-   $pagina->utm_campana = Input::get('utm_campana');
-   $pagina->remember_token = Input::get('_token');
-   $pagina->save();
-     $redireccion = Input::get('redireccion');
-     return Redirect::to($redireccion)->with('status', 'ok_create');
+
+public function estadistica()
+{
+    $ip = Input::get('ip');
+    $tenant = $this->tenantName;
+
+    $userModel = $tenant
+        ? \Sitedigitalweb\Pagina\Tenant\Cms_Ips::class
+        : Cms_Ips::class;
+
+    $user = $userModel::where('ip', $ip)->first();
+
+    if (!$user) {
+        $statsModel = $tenant
+            ? \Sitedigitalweb\Pagina\Tenant\Cms_Stadistics::class
+            : Cms_Stadistics::class;
+
+        $pagina = new $statsModel();
+
+        $pagina->fill([
+            'ip'            => $ip,
+            'host'          => Input::get('host'),
+            'navegador'     => Input::get('navegador'),
+            'referido'      => Input::get('referido'),
+            'ciudad'        => Input::get('ciudad'),
+            'pais'          => Input::get('pais'),
+            'pagina'        => Input::get('pagina'),
+            'mes'           => Input::get('mes'),
+            'ano'           => Input::get('ano'),
+            'hora'          => Input::get('hora'),
+            'dia'           => Input::get('dia'),
+            'idioma'        => Input::get('idioma'),
+            'cp'            => Input::get('cp'),
+            'longitud'      => Input::get('longitud'),
+            'latitud'       => Input::get('latitud'),
+            'fecha'         => Input::get('fecha'),
+            'utm_medium'    => Input::get('utm_medium'),
+            'utm_source'    => Input::get('utm_source'),
+            'utm_campana'   => Input::get('utm_campana'),
+            'remember_token'=> Input::get('_token'),
+        ]);
+
+        $pagina->save();
+
+        return Redirect::to(Input::get('redireccion'))->with('status', 'ok_create');
     }
-   }
+
+    // Si el usuario ya existe, puedes retornar algo si deseas.
+}
+
+  
   }

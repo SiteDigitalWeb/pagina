@@ -5,52 +5,65 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Sitedigitalweb\Pagina\Page;
+use Sitedigitalweb\Pagina\Cms_Stadistics;
 use Sitedigitalweb\Pagina\Cms_Recaptcha;
+use Sitedigitalweb\Pagina\Cms_Template;
+use Illuminate\Support\Facades\Schema;
 use DB;
 
 
 class TemplateController extends Controller
 {
-    // Mostrar editor
-    public function editor(Request $request)
-    {
-        $templateId = $request->query('load');
-        return view('pagina::pages.editor', compact('templateId'));
+ 
+public function editor(Request $request)
+{
+    $templateId = $request->query('load');
+
+    // Detectar si estamos en un tenant
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    // Si estamos en tenant, simplemente usamos la base del tenant
+    if ($website) {
+        $web = Cms_Template::first(); // Aquí no hay website_id
+    } else {
+        // En la base central, también usamos sin filtro
+        $web = Cms_Template::first(); // O con filtro si tú creaste website_id
     }
+
+    return view('pagina::pages.editor', compact('templateId', 'web'));
+}
+
+
 
 public function preview($id)
 {
-    // Verificar si estamos en un tenant o en el sistema central
     if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
-        // Entorno tenant específico
-        $template = \Sitedigitalweb\Pagina\Tenant\Page::where('id', $id)
-            ->where('website_id', $website->id)
-            ->firstOrFail();
+        // Entorno tenant específico, sin usar website_id
+        $template = \Sitedigitalweb\Pagina\Tenant\Page::findOrFail($id);
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
+        $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
     } else {
         // Entorno central (host)
         $template = Page::findOrFail($id);
         $recaptcha = Cms_Recaptcha::first();
+        $web = Cms_Template::first();
     }
 
-    // Obtener el contenido (adaptado para JSON o array)
     $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
-    
-    // Procesar los componentes
+
     $content = $this->renderComponent($structure ?? []);
     $styles = $this->renderStyles($template->styles);
     $scripts = $this->renderScripts($template->scripts);
 
-    // Identificar el tenancy en la vista para logos/estilos específicos
     $tenantData = [
         'is_tenant' => isset($website),
         'tenant_id' => $website->id ?? null,
         'tenant_name' => $website->name ?? null
     ];
 
-
-    return view('pagina::pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha'));
+    return view('pagina::pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 }
+
 
 public function page()
 {
@@ -185,6 +198,14 @@ private function renderComponent($component)
         return $html;
     }
 
+    // Ignorar nodos de tipo comentario o contenido que sea un comentario HTML
+    if (
+        ($component['type'] ?? '') === 'comment' ||
+        str_starts_with(trim($component['content'] ?? ''), '<!--')
+    ) {
+        return ''; // No renderizar
+    }
+
     // Si es un nodo de texto simple
     if (($component['type'] ?? '') === 'textnode') {
         return $component['content'] ?? '';
@@ -261,7 +282,7 @@ private function renderComponent($component)
     if (!empty($components) && !$isImage) {
         foreach ($components as $child) {
             if (in_array($child['type'] ?? '', [
-                'text-input', 'email-input', 'textarea-input', 
+                'text-input', 'email-input', 'textarea-input',
                 'select-input', 'number-input', 'submit-input', 'date-input'
             ])) {
                 $innerHtml .= $this->renderInputComponent($child);
@@ -278,9 +299,8 @@ private function renderComponent($component)
 
     // Construir y retornar HTML final
     return $this->buildFinalHtml($tag, $attrString, $innerHtml, $isImage);
-
-
 }
+
 
 
 private function renderBrandLogoSlider($component)
@@ -622,38 +642,40 @@ private function isJson($string)
     // Guardar plantilla
   public function store(Request $request)
 {
-\Log::debug('Request Data:', $request->all());
+    // Registrar en el log todo el contenido de la solicitud entrante
+    \Log::debug('Request Data:', $request->all());
  
+    // Validar los datos del request con reglas específicas
     $validated = $request->validate([
-        'name'    => 'required|string|max:255',
-        'content' => 'required', // puede venir como array o string
-        'styles' => 'nullable|array',
-        'scripts' => 'nullable', // si viene de forma separada
-        'assets'  => 'nullable|array',
-        'id'      => 'nullable|integer'
+        'name'    => 'required|string|max:255', // El nombre es obligatorio y debe ser un string corto
+        'content' => 'required', // El contenido puede ser un string o un array
+        'styles'  => 'nullable|array', // Los estilos son opcionales y deben ser un array si están presentes
+        'scripts' => 'nullable', // Los scripts pueden venir por separado como string
+        'assets'  => 'nullable|array', // Los assets son opcionales y deben ser un array
+        'id'      => 'nullable|integer' // El ID puede venir si se está actualizando una página existente
     ]);
     
-    // Convertir content a string en caso de que ya sea un array,
-    // ya que el modelo tiene un cast para content, pero eso ocurre al leerlo.
+    // Si el contenido es un array (por ejemplo, estructuras JSON complejas), se convierte a string
     $contentHtml = is_array($validated['content'])
         ? json_encode($validated['content'])
         : $validated['content'];
 
-    // Inicializar la variable que almacenará el contenido sin los <script>
+    // Inicializa el contenido sin scripts, inicialmente igual al contenido completo
     $contentWithoutScripts = $contentHtml;
 
-    // Se obtiene el valor de scripts enviado, si lo hay
+    // Se obtiene el valor de 'scripts' si fue enviado explícitamente
     $scripts = $validated['scripts'] ?? null;
 
-    // Si no se envió 'scripts' y contentHtml es un string, intentar extraer los <script> usando regex
+    // Si no se envió 'scripts', pero el contenido incluye etiquetas <script>, se extraen con regex
     if (!$scripts && is_string($contentHtml)) {
         if (preg_match_all('/<script\b[^>]*>(.*?)<\/script>/is', $contentHtml, $matches)) {
-            $scripts = implode("\n", $matches[0]); // Obtiene todos los bloques <script>...</script>
-            // Se remueven los scripts del HTML
+            $scripts = implode("\n", $matches[0]); // Concatenar todos los bloques <script> encontrados
+            // Eliminar los bloques <script> del HTML para guardar una versión limpia
             $contentWithoutScripts = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $contentHtml);
         }
     }
-        
+
+    // Preparar los datos para guardar en la base de datos
     $pageData = [
         'name'    => $validated['name'],
         'content' => $contentWithoutScripts,
@@ -662,19 +684,26 @@ private function isJson($string)
         'scripts' => $scripts
     ];
 
+    // Obtener el contexto del sitio actual (multi-tenant)
     $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    // Determinar el modelo que se usará, según si hay un tenant o no
     $pageModel = $website ? \Sitedigitalweb\Pagina\Tenant\Page::class : Page::class;
 
-    $template = $website
-    ? $pageModel::forWebsite($website)->updateOrCreate(
-        ['id' => $validated['id'] ?? null],
-        $pageData
-      )
-    : $pageModel::updateOrCreate(
-        ['id' => $validated['id'] ?? null],
-        $pageData
-      );
+    // Crear o actualizar la página en base al ID (si está presente) y al website actual
+    if ($website) {
+        $template = $pageModel::updateOrCreate(
+            ['id' => $validated['id'] ?? null],
+            $pageData + ['website_id' => $website->id]
+        );
+    } else {
+        $template = $pageModel::updateOrCreate(
+            ['id' => $validated['id'] ?? null],
+            $pageData
+        );
+    }
 
+    // Devolver respuesta exitosa con ID del template y URL de vista previa
     return response()->json([
         'success'     => true,
         'id'          => $template->id,
@@ -682,42 +711,48 @@ private function isJson($string)
     ]);
 }
 
+
     // Cargar plantilla
 public function load($id)
 {
-    // Obtener el tenant actual (si existe)
+    // Detectar si estamos dentro de un tenant
     $website = app(\Hyn\Tenancy\Environment::class)->website();
-    
-    // Determinar el modelo correcto según el contexto
-    $pageModel = $website ? \Sitedigitalweb\Pagina\Tenant\Page::class : Page::class;
-    
-    // Construir la consulta base
+
+    // Seleccionar el modelo correcto según el contexto
+    $pageModel = $website 
+        ? \Sitedigitalweb\Pagina\Tenant\Page::class 
+        : Page::class;
+
+    // Construir la consulta
     $query = $pageModel::where('id', $id);
-    
-    // Filtrar por tenant si es necesario
-    if ($website) {
+
+    // Aplicar filtro solo si estamos en un tenant y el modelo tiene 'website_id'
+    if ($website && Schema::hasColumn((new $pageModel)->getTable(), 'website_id')) {
         $query->where('website_id', $website->id);
     }
-    
-    // Obtener la página
+
+    // Obtener la plantilla o fallar
     $template = $query->firstOrFail();
-    
-    // Preparar los componentes y estilos
+
+    // Preparar componentes
     $components = $this->prepareComponentsForEditor(
         is_string($template->content) ? json_decode($template->content, true) : ($template->content ?? [])
     );
-    
+
+    // Preparar estilos
     $styles = $this->prepareStylesForEditor(
         is_string($template->styles) ? json_decode($template->styles, true) : ($template->styles ?? [])
     );
-    
+
+    // Retornar la respuesta JSON
     return response()->json([
         'gjs-components' => $components,
-        'gjs-styles' => $styles,
-        'gjs-assets' => $template->assets ?? [],
-        'tenant_id' => $website->id ?? null, // Opcional: para identificar el tenant en el frontend
+        'gjs-styles'     => $styles,
+        'gjs-assets'     => $template->assets ?? [],
+        'tenant_id'      => $website->id ?? null,
     ]);
 }
+
 
 private function prepareComponentsForEditor($content)
 {
