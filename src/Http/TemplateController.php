@@ -169,14 +169,41 @@ private function renderStyles(array $stylesArray): string
     $css = '';
 
     foreach ($stylesArray as $styleBlock) {
-        if (!isset($styleBlock['selectors'], $styleBlock['style'])) {
-            continue; // Saltamos si faltan claves necesarias
+        if (
+            !isset($styleBlock['selectors'], $styleBlock['style']) ||
+            empty($styleBlock['selectors']) ||
+            !is_array($styleBlock['style']) ||
+            empty($styleBlock['style'])
+        ) {
+            continue;
         }
 
-        $selectors = implode(', ', $styleBlock['selectors']);
-        $styleRules = '';
+        $selectors = $styleBlock['selectors'];
 
+        // Si el bloque tiene background-image y solo son clases → combinamos
+        if (isset($styleBlock['style']['background-image']) && !empty($selectors)) {
+            $allClassesArePlain = true;
+            foreach ($selectors as $sel) {
+                if (strpos($sel, '#') === 0) {
+                    $allClassesArePlain = false;
+                    break;
+                }
+            }
+            if ($allClassesArePlain) {
+                // Limpieza de slashes
+                $styleBlock['style']['background-image'] = str_replace('\/', '/', $styleBlock['style']['background-image']);
+                // Crear selector único con todas las clases juntas
+                $selectors = ['.' . implode('.', $selectors)];
+            }
+        }
+
+        $selectors = implode(', ', $selectors);
+
+        $styleRules = '';
         foreach ($styleBlock['style'] as $property => $value) {
+            if (stripos($property, 'background-image') !== false) {
+                $value = str_replace('\/', '/', $value);
+            }
             $styleRules .= "$property: $value; ";
         }
 
@@ -185,6 +212,9 @@ private function renderStyles(array $stylesArray): string
 
     return $css;
 }
+
+
+
 
 
 private function renderComponent($component)
