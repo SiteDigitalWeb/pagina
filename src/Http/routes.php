@@ -51,7 +51,7 @@ Route::post('save-component', [Sitedigitalweb\Pagina\Http\GrapejsController::cla
 });
 
  Route::get('/', 'Sitedigitalweb\Pagina\Http\TemplateController@page');
- Route::get('/{id}', 'Sitedigitalweb\Pagina\Http\TemplateController@pages');
+ Route::get('/{page}', 'Sitedigitalweb\Pagina\Http\TemplateController@pages');
 
 
 

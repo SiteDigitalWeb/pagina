@@ -61,79 +61,73 @@ public function preview($id)
         'tenant_name' => $website->name ?? null
     ];
 
-    return view('pagina::pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+    $templateFolder = $web->template_name ?? 'default';
+
+
+    return view('{$templateFolder}.pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 }
 
 
 public function page()
 {
-    // Obtener el website actual (tenant o central)
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
+        // Entorno tenant específico, sin usar website_id
+        $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', '/')->firstOrFail();
+        $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
+        $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
+    } else {
+        // Entorno central (host)
+        $template = Page::where('slug', '/')->firstOrFail();
+        $recaptcha = Cms_Recaptcha::first();
+        $web = Cms_Template::first();
+    }
 
-    // Determinar el modelo a usar según el contexto
-    $pageModel = $website ? \Sitedigitalweb\Pagina\Tenant\Page::class : Page::class;
-
-    // Buscar la página de inicio
-    $template = $pageModel::where('slug', '/')
-        ->when($website, function ($query) use ($website) {
-            return $query->where('website_id', $website->id);
-        })
-        ->firstOrFail();
-
-    // Procesar el contenido
     $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
+
     $content = $this->renderComponent($structure ?? []);
     $styles = $this->renderStyles($template->styles);
     $scripts = $this->renderScripts($template->scripts);
 
-    // Datos adicionales del tenant para la vista
     $tenantData = [
-        'is_tenant' => (bool) $website,
+        'is_tenant' => isset($website),
         'tenant_id' => $website->id ?? null,
         'tenant_name' => $website->name ?? null
     ];
 
-    return view('templates.index', compact('template', 'content', 'styles', 'scripts', 'tenantData'));
+    // Suponiendo que en cms_template tienes una columna 'template_name'
+    $templateFolder = $web->template_name ?? 'default';
+
+    return view('{$templateFolder}.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 }
+
 
 public function pages($page)
 {
-    // Obtener el tenant actual (si existe)
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
-    
-    // Determinar el modelo correcto según el contexto
-    $pageModel = $website ? \Sitedigitalweb\Pagina\Tenant\Page::class : Page::class;
-    
-    // Construir la consulta base
-    $query = $pageModel::where('slug', $page);
-    
-    // Filtrar por tenant si es necesario
-    if ($website) {
-        $query->where('website_id', $website->id);
+    if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
+        // Entorno tenant específico, sin usar website_id
+        $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', $page)->firstOrFail();
+        $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
+        $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
+    } else {
+        // Entorno central (host)
+        $template = Page::where('slug', $page)->firstOrFail();
+        $recaptcha = Cms_Recaptcha::first();
+        $web = Cms_Template::first();
     }
-    
-    // Obtener la página
-    $template = $query->firstOrFail();
-    
-    // Procesar el contenido (con soporte para JSON o array)
+
     $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
-    
-    // Generar los componentes
+
     $content = $this->renderComponent($structure ?? []);
     $styles = $this->renderStyles($template->styles);
     $scripts = $this->renderScripts($template->scripts);
-    
-    // Preparar datos adicionales del tenant
-    $tenantInfo = [
-        'is_tenant' => (bool)$website,
+
+    $tenantData = [
+        'is_tenant' => isset($website),
         'tenant_id' => $website->id ?? null,
         'tenant_name' => $website->name ?? null
     ];
 
-    return view('templates.index', array_merge(
-        compact('template', 'content', 'styles', 'scripts'),
-        ['tenantData' => $tenantInfo]
-    ));
+    return view('pagina::pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 }
 
 private function renderScripts(array $scriptsArray): string
