@@ -61,10 +61,10 @@ public function preview($id)
         'tenant_name' => $website->name ?? null
     ];
 
-    $templateFolder = $web->template_name ?? 'default';
+    $templateFolder = $web->template ?? 'default';
 
 
-    return view('{$templateFolder}.pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+    return view('pagina::pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 }
 
 
@@ -95,7 +95,7 @@ public function page()
     ];
 
     // Suponiendo que en cms_template tienes una columna 'template_name'
-    $templateFolder = $web->template_name ?? 'default';
+    $templateFolder = $web->template ?? 'default';
 
     return view('{$templateFolder}.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 }
@@ -127,7 +127,9 @@ public function pages($page)
         'tenant_name' => $website->name ?? null
     ];
 
-    return view('pagina::pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+    $templateFolder = $web->template_name ?? 'default';
+
+    return view('{$templateFolder}.pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 }
 
 private function renderScripts(array $scriptsArray): string
