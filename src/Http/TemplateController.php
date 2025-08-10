@@ -97,7 +97,8 @@ public function page()
     // Suponiendo que en cms_template tienes una columna 'template_name'
     $templateFolder = $web->template ?? 'default';
 
-    return view('{$templateFolder}.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+
 }
 
 
@@ -129,7 +130,8 @@ public function pages($page)
 
     $templateFolder = $web->template_name ?? 'default';
 
-    return view('{$templateFolder}.pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+      return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+
 }
 
 private function renderScripts(array $scriptsArray): string
