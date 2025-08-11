@@ -128,8 +128,8 @@ public function pages($page)
         'tenant_name' => $website->name ?? null
     ];
 
-    $templateFolder = $web->template_name ?? 'default';
-
+    $templateFolder = $web->template ?? 'default';
+    
       return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 
 }

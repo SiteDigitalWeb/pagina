@@ -513,17 +513,16 @@ editor.on('asset:upload:error', (error) => {
     // Función para eliminar todo el contenido del editor
 function clearEditorContent() {
     if (confirm('¿Estás seguro de que deseas eliminar todo el contenido del editor? Esta acción no se puede deshacer.')) {
-        // Limpiar componentes, estilos y scripts
+        // Limpiar componentes y estilos
         editor.DomComponents.clear();
         editor.CssComposer.clear();
 
-        // Eliminar assets del AssetManager (solo del editor, no del servidor)
-        const allAssets = editor.AssetManager.getAll();
-        allAssets.forEach(asset => editor.AssetManager.remove(asset));
+        // ⚠️ No tocamos el AssetManager para conservar las imágenes cargadas
+        // const allAssets = editor.AssetManager.getAll();
+        // allAssets.forEach(asset => editor.AssetManager.remove(asset));
 
-     
-        showStatus('Editor limpiado completamente', 'success');
-        console.log('Editor reseteado: componentes, estilos, scripts y assets eliminados.');
+        showStatus('Contenido del editor eliminado (imágenes conservadas)', 'success');
+        console.log('Editor reseteado: componentes y estilos eliminados, imágenes conservadas.');
     }
 }
 
