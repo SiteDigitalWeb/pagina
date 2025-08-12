@@ -64,7 +64,9 @@ class ImageController extends Controller
    public function index()
 {
     $tenant = $this->tenantName ?? 'default'; // Reemplaza según tu lógica
-    $folderPath = public_path("saas/{$tenant}");
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    $uuid = $website->uuid;
+    $folderPath = public_path("saas/{$uuid}");
 
     $website = app(\Hyn\Tenancy\Environment::class)->website();
     $uuid = $website->uuid;
