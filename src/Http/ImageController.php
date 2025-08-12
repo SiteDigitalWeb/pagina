@@ -61,16 +61,16 @@ class ImageController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-   public function index()
+public function index()
 {
-    $tenant = $this->tenantName ?? 'default'; // Reemplaza según tu lógica
     $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    if (!$website) {
+        return response()->json(['error' => 'No se detectó tenant'], 404);
+    }
+
     $uuid = $website->uuid;
     $folderPath = public_path("saas/{$uuid}");
-
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
-    $uuid = $website->uuid;
-
     $images = [];
 
     if (File::exists($folderPath)) {
@@ -79,7 +79,7 @@ class ImageController extends Controller
         foreach ($files as $file) {
             if (Str::startsWith(File::mimeType($file), 'image/')) {
                 $images[] = [
-                    'url' => asset("saas/{$uuid}/" . $file->getFilename()),
+                    'url'  => url("saas/{$uuid}/" . $file->getFilename()),
                     'name' => $file->getFilename(),
                     'path' => "saas/{$uuid}/" . $file->getFilename(),
                 ];
@@ -89,6 +89,7 @@ class ImageController extends Controller
 
     return response()->json($images);
 }
+
 
     /**
      * Elimina una imagen específica.
