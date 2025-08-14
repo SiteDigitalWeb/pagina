@@ -107,7 +107,6 @@ public function trackClick(Request $request) {
 
    public function submitForm(Request $request)
 {
-
      // Verificar si estamos en un tenant o en el sistema central
     if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
@@ -115,8 +114,8 @@ public function trackClick(Request $request) {
         // Entorno central (host)
         $recaptcha = Cms_Recaptcha::first();
     }
-
      if (!$recaptcha) {
+
         return back()->withErrors(['captcha' => 'Configuración de reCAPTCHA no encontrada']);
     }
 
@@ -132,8 +131,10 @@ public function trackClick(Request $request) {
     $action = $recaptchaResponse->json('action');
 
     if (!$success || $score < 0.5 || $action !== 'submit') {
+
         return back()->withErrors(['captcha' => 'reCAPTCHA falló la validación'])->withInput();
     }
+
 
     // 2. Validar campos del formulario
     $validated = $request->validate([
@@ -167,8 +168,14 @@ public function trackClick(Request $request) {
         'campo20' => 'nullable|string|max:255',
     ]);
 
-    // 3. Guardar
-    Cms_Forms::create($validated);
+
+     if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
+        \Sitedigitalweb\Pagina\Tenant\Cms_Forms::create($validated);
+    } else {
+        // Entorno central (host)
+        Cms_Forms::create($validated);
+    }
+   
 
     // 4. Redirigir con éxito
     return back()->with('success', '¡Formulario enviado correctamente!');

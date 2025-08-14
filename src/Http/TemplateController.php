@@ -75,11 +75,26 @@ public function page()
         $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', '/')->firstOrFail();
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
+        $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
+        ->where('visibility', 1)
+        ->orderBy('position', 'asc')
+        ->with(['children' => function ($query) {
+            $query->where('visibility', 1)->orderBy('position', 'asc');
+        }])
+        ->get();
+        
     } else {
         // Entorno central (host)
         $template = Page::where('slug', '/')->firstOrFail();
         $recaptcha = Cms_Recaptcha::first();
         $web = Cms_Template::first();
+        $menuPages = Page::whereNull('page_id')
+        ->where('visibility', 1)
+        ->orderBy('position', 'asc')
+        ->with(['children' => function ($query) {
+            $query->where('visibility', 1)->orderBy('position', 'asc');
+        }])
+        ->get();
     }
 
     $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
@@ -97,7 +112,7 @@ public function page()
     // Suponiendo que en cms_template tienes una columna 'template_name'
     $templateFolder = $web->template ?? 'default';
 
-    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages'));
 
 }
 
@@ -109,11 +124,25 @@ public function pages($page)
         $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', $page)->firstOrFail();
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
+        $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
+        ->where('visibility', 1)
+        ->orderBy('position', 'asc')
+        ->with(['children' => function ($query) {
+            $query->where('visibility', 1)->orderBy('position', 'asc');
+        }])
+        ->get();
     } else {
         // Entorno central (host)
         $template = Page::where('slug', $page)->firstOrFail();
         $recaptcha = Cms_Recaptcha::first();
         $web = Cms_Template::first();
+        $menuPages = Page::whereNull('page_id')
+        ->where('visibility', 1)
+        ->orderBy('position', 'asc')
+        ->with(['children' => function ($query) {
+            $query->where('visibility', 1)->orderBy('position', 'asc');
+        }])
+        ->get();
     }
 
     $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
@@ -130,7 +159,7 @@ public function pages($page)
 
     $templateFolder = $web->template ?? 'default';
     
-      return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+      return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages'));
 
 }
 

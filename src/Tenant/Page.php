@@ -83,5 +83,12 @@ public function getIsProtectedAttribute()
         $this->attributes['assets'] = is_string($value) ? $value : json_encode($value);
     }
 
+    public function childrena()
+    {
+     return $this->hasMany(self::class, 'page_id')
+        ->where('visibility', 1)
+        ->orderBy('position', 'asc');
+    }
+
 }
 

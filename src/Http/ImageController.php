@@ -16,7 +16,7 @@ class ImageController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function upload(Request $request)
+  public function upload(Request $request)
 {
     $request->validate([
         'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:500',
@@ -32,22 +32,34 @@ class ImageController extends Controller
     $website = app(\Hyn\Tenancy\Environment::class)->website();
     $uuid = $website->uuid;
 
-    $tenant = $this->tenantName ?? 'default'; // Reemplaza esto con tu método real
     $storagePath = public_path("saas/{$uuid}");
 
-    // Crea la carpeta si no existe
+    // Crear carpeta si no existe
     if (!File::exists($storagePath)) {
         File::makeDirectory($storagePath, 0755, true);
     }
 
     if ($request->hasFile('files')) {
         foreach ($request->file('files') as $file) {
-            $fileName = Str::uuid() . '.' . $file->getClientOriginalExtension();
-            $file->move($storagePath, $fileName);
+            // Tomar nombre original y limpiar caracteres peligrosos
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = $file->getClientOriginalExtension();
+            $safeName = Str::slug($originalName, '_'); // ejemplo: "mi_foto_de_viaje"
+
+            // Evitar colisiones de nombres
+            $finalName = $safeName . '.' . $extension;
+            $counter = 1;
+            while (File::exists($storagePath . '/' . $finalName)) {
+                $finalName = $safeName . '_' . $counter . '.' . $extension;
+                $counter++;
+            }
+
+            // Mover archivo
+            $file->move($storagePath, $finalName);
 
             $uploadedAssets[] = [
-                'src' => asset("saas/{$uuid}/{$fileName}"),
-                'name' => $fileName,
+                'src' => asset("saas/{$uuid}/{$finalName}"),
+                'name' => $finalName,
                 'type' => $file->getClientMimeType(),
             ];
         }
@@ -55,6 +67,7 @@ class ImageController extends Controller
 
     return response()->json($uploadedAssets);
 }
+
 
     /**
      * Lista todas las imágenes guardadas en la carpeta de editor.

@@ -127,25 +127,30 @@ public function update(StorePageRequest $request, $id)
             $page = \Sitedigitalweb\Pagina\Tenant\Page::findOrFail($id);
         }
 
-        $idioma = $request->input('language');
+        $idioma = strtolower($request->input('language'));
 
         $pageData = [
-            'page' => $request->input('page'),
-            'slugcon' => $request->input('slug'),
-            'slug' => $idioma === 'ne' ? $request->input('slug') : $idioma.'/'.$request->input('slug'),
-            'title' => $request->input('title'),
-            'description' => $request->input('description'),
-            'keywords' => $request->input('keywords'),
-            'position' => $request->input('position'),
-            'menu_type' => $request->input('menu_type'),
-            'visibility' => $request->input('visibility'),
-            'visibility_ecommerce' => $request->input('visibility_ecommerce'),
-            'visibility_blog' => $request->input('visibility_blog'),
-            'language' => $idioma,
-            'pixel' => $request->input('pixel'),
-            'follow' => $request->input('follow'),
-            'page_id' => $request->input('page_id'),
-        ];
+    'page' => $request->input('page'),
+    'slugcon' => $request->input('slug'),
+    'slug' => match ($idioma) {
+        'ne' => '/',
+        'es', 'en', 'fr' => '/' . $idioma,
+        default => $request->input('slug'), // por si llega otro idioma
+    },
+    'title' => $request->input('title'),
+    'description' => $request->input('description'),
+    'keywords' => $request->input('keywords'),
+    'position' => $request->input('position'),
+    'menu_type' => $request->input('menu_type'),
+    'visibility' => $request->input('visibility'),
+    'visibility_ecommerce' => $request->input('visibility_ecommerce'),
+    'visibility_blog' => $request->input('visibility_blog'),
+    'language' => $idioma,
+    'pixel' => $request->input('pixel'),
+    'follow' => $request->input('follow'),
+    'page_id' => $request->input('page_id'),
+];
+
 
         $page->update($pageData);
 
