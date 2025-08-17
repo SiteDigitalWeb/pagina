@@ -279,6 +279,23 @@ private function renderComponent($component)
     $attributes = $component['attributes'] ?? [];
     $components = $component['components'] ?? [];
 
+    // Manejo específico para iframes (ej: Google Maps)
+    if (
+    ($component['type'] ?? '') === 'iframe' ||
+    ($component['tagName'] ?? '') === 'iframe' ||
+    ($attributes['data-gjs-type'] ?? '') === 'iframe'
+    ) {
+    $attrString = $this->buildAttributesString($attributes);
+    return "<iframe {$attrString}></iframe>";
+    }
+
+    // Manejo específico para enlaces
+    if (
+    ($component['type'] ?? '') === 'link' ||
+    ($component['tagName'] ?? '') === 'a'
+    ) {
+    $tag = 'a';
+    }
     // Detectar si es una imagen
     $isImage = $this->isImageComponent($component, $attributes);
 

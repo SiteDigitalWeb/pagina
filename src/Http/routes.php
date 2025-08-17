@@ -15,12 +15,10 @@ Route::post('/templatess', [Sitedigitalweb\Pagina\Http\TemplateController::class
 Route::get('/templates/{id}', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'load'])->name('templates.load');
 Route::get('/editor/components', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'getComponents']);
 Route::post('/upload', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'upload'])->name('upload');
-
 Route::resource('utm', Sitedigitalweb\Pagina\Http\UtmController::class);
 Route::get('register-tenant', 'Sitedigitalweb\Pagina\Http\TenantController@register');
 Route::post('create', 'Sitedigitalweb\Pagina\Http\TenantController@create');
 Route::resource('recaptcha', Sitedigitalweb\Pagina\Http\RecaptchaSettingController::class);
-
 Route::get('/grape-components', function () {
   $template = 'juanchaproducciones';
   $componentsPath = resource_path('views/'.$template);

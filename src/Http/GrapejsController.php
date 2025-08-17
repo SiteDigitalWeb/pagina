@@ -7,7 +7,7 @@ use DigitalsiteSaaS\Pagina\Gratemplates;
 use DigitalsiteSaaS\Pagina\GrapeTemp;
 use DigitalsiteSaaS\Pagina\GrapeImage;
 use DigitalsiteSaaS\Pagina\Grapeselect;
-use DigitalsiteSaaS\Pagina\SavedComponent;
+use Sitedigitalweb\Pagina\Cms_SavedComponent;
 use Input;
 use Hyn\Tenancy\Models\Hostname;
 use Hyn\Tenancy\Models\Website;
@@ -407,7 +407,6 @@ echo json_encode($response);
         'content' => 'required|string',
     ]);
 
-dd('fgs');
     // Puedes guardar esto en una tabla 'components' con campos: id, name, content, created_at...
     \DB::table('grapes_components')->insert([
         'name' => $request->name,
@@ -421,7 +420,7 @@ dd('fgs');
 
 public function getComponents()
 {
-    $components = \DB::table('saved_components')->get(['id', 'label', 'content']);
+    $components = Cms_SavedComponent::get(['id', 'label', 'content']);
 
     return response()->json($components->map(function ($comp) {
         return [
@@ -440,7 +439,7 @@ public function store(Request $request)
             'content' => 'required|string'
         ]);
 
-        $component = new \DigitalsiteSaaS\Pagina\Tenant\SavedComponent();
+        $component = new Cms_SavedComponent();
         $component->label = $request->input('name');
         $component->content = $request->input('content');
         $component->category = 'Componentes Guardados';
