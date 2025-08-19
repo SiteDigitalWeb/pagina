@@ -19,6 +19,7 @@ use Hyn\Tenancy\Repositories\WebsiteRepository;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use App\User;
+use App\Models\Tenant;
 use Input;
 use File;
 use Redirect;
@@ -29,6 +30,7 @@ use DigitalsiteSaaS\Usuario\Usuario;
 use Auth;
 use Sitedigitalweb\Pagina\Cms_Pais;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 
 class TenantController extends Controller{
@@ -138,24 +140,70 @@ public function certificate()
     return view('pagina::certificate.certificate');
 }
 
-public function generate(Request $request)
+public function store(Request $request)
     {
-
         $request->validate([
-            'domain' => 'required|string'
+            'domain' => 'required|unique:tenants,domain'
         ]);
 
-        $domain = $request->input('domain');
+        $domain = $request->domain;
 
-        // Ejecutamos el script en el servidor
-        $process = new Process(["/usr/local/bin/generate_ssl.sh", $domain]);
+        // Guardar tenant
+        $tenant = Tenant::create([
+            'domain' => $domain
+        ]);
+
+        // 1. Crear certificado con Certbot
+        $process = new Process([
+            'certbot', 'certonly', '--nginx',
+            '-d', $domain,
+            '--non-interactive', '--agree-tos',
+            '-m', 'soporte@tudominio.com'
+        ]);
         $process->run();
 
         if (!$process->isSuccessful()) {
-            return back()->withErrors(['error' => $process->getErrorOutput()]);
+            throw new ProcessFailedException($process);
         }
 
-        return back()->with('success', "SSL generado correctamente para {$domain}");
+        // 2. Crear bloque Nginx automáticamente
+        $nginxConfig = "
+server {
+    listen 80;
+    server_name {$domain};
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name {$domain};
+
+    ssl_certificate /etc/letsencrypt/live/{$domain}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{$domain}/privkey.pem;
+
+    root /var/www/{$domain}/public;
+    index index.php index.html;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location ~ \.php\$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}
+";
+        $filePath = "/etc/nginx/sites-available/{$domain}";
+        file_put_contents($filePath, $nginxConfig);
+        symlink($filePath, "/etc/nginx/sites-enabled/{$domain}");
+
+        // 3. Recargar Nginx
+        (new Process(['systemctl', 'reload', 'nginx']))->run();
+
+        return back()->with('success', "Tenant {$domain} creado con SSL y bloque Nginx.");
     }
 
  

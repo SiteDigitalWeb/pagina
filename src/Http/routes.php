@@ -20,6 +20,7 @@ Route::get('register-tenant', 'Sitedigitalweb\Pagina\Http\TenantController@regis
 Route::post('create', 'Sitedigitalweb\Pagina\Http\TenantController@create');
 Route::get('certificate', 'Sitedigitalweb\Pagina\Http\TenantController@certificate');
 Route::post('generate-ssl', [Sitedigitalweb\Pagina\Http\TenantController::class, 'generate'])->name('generate.ssl');
+Route::post('/tenants/ssl', [Sitedigitalweb\Pagina\Http\TenantController::class, 'createSSL'])->name('tenants.ssl');
 Route::resource('recaptcha', Sitedigitalweb\Pagina\Http\RecaptchaSettingController::class);
 Route::get('/grape-components', function () {
   $template = 'juanchaproducciones';
@@ -151,6 +152,7 @@ Route::get('gestion/municipios/{id}', 'DigitalsiteSaaS\Pagina\Http\Configuracion
 
 
 Route::group(['middleware' => ['web']], function (){
+  Route::post('/tenants', [Sitedigitalweb\Pagina\Http\TenantController::class, 'store'])->name('tenants.store');
 Route::post('/whatsapp-track', [DigitalsiteSaaS\Pagina\Http\WebController::class, 'trackClick'])->name('whatsapp.track');
 Route::get('robots.txt', 'DigitalsiteSaaS\Pagina\Http\WebController@robot');
 
