@@ -28,6 +28,7 @@ use Mail;
 use DigitalsiteSaaS\Usuario\Usuario;
 use Auth;
 use Sitedigitalweb\Pagina\Cms_Pais;
+use Symfony\Component\Process\Process;
 
 
 class TenantController extends Controller{
@@ -131,6 +132,32 @@ return view('pagina::tenants.register', [
 ]);
 
  }
+
+public function certificate()
+{
+    return view('pagina::certificate.certificate');
+}
+
+public function generate(Request $request)
+    {
+
+        $request->validate([
+            'domain' => 'required|string'
+        ]);
+
+        $domain = $request->input('domain');
+
+        // Ejecutamos el script en el servidor
+        $process = new Process(["/usr/local/bin/generate_ssl.sh", $domain]);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            return back()->withErrors(['error' => $process->getErrorOutput()]);
+        }
+
+        return back()->with('success', "SSL generado correctamente para {$domain}");
+    }
+
  
 }
 

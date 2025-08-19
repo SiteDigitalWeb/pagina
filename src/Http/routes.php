@@ -18,6 +18,8 @@ Route::post('/upload', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'u
 Route::resource('utm', Sitedigitalweb\Pagina\Http\UtmController::class);
 Route::get('register-tenant', 'Sitedigitalweb\Pagina\Http\TenantController@register');
 Route::post('create', 'Sitedigitalweb\Pagina\Http\TenantController@create');
+Route::get('certificate', 'Sitedigitalweb\Pagina\Http\TenantController@certificate');
+Route::post('generate-ssl', [Sitedigitalweb\Pagina\Http\TenantController::class, 'generate'])->name('generate.ssl');
 Route::resource('recaptcha', Sitedigitalweb\Pagina\Http\RecaptchaSettingController::class);
 Route::get('/grape-components', function () {
   $template = 'juanchaproducciones';
