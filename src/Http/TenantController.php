@@ -140,34 +140,118 @@ public function certificate()
     return view('pagina::certificate.certificate');
 }
 
-public function store(Request $request)
+ public function store(Request $request)
     {
         $request->validate([
             'domain' => 'required|unique:tenants,domain'
         ]);
 
-        $domain = $request->domain;
+        $domain = trim($request->domain);
 
-        // Guardar tenant
+        // 1) Crear el tenant en estado "pending"
         $tenant = Tenant::create([
-            'domain' => $domain
+            'domain'        => $domain,
+            'ssl_status'    => 'pending',
+            'dns_verified'  => false,
         ]);
 
-        // 1. Crear certificado con Certbot
-        $process = new Process([
-            'certbot', 'certonly', '--nginx',
-            '-d', $domain,
-            '--non-interactive', '--agree-tos',
-            '-m', 'soporte@tudominio.com'
-        ]);
-        $process->run();
+        // Definir valores reutilizables
+        $phpFpmSocket = 'unix:/run/php/php8.3-fpm.sock'; // Ajusta si tu versión es diferente
+        $certPath     = "/etc/letsencrypt/live/{$domain}";
 
-        if (!$process->isSuccessful()) {
-            throw new ProcessFailedException($process);
-        }
+        try {
+            /**
+             * 2) Verificación DNS: el dominio debe resolver a la IP del servidor
+             */
+            // IP del servidor (toma la primera IP reportada por hostname -I)
+            $serverIp = trim(shell_exec("hostname -I | awk '{print $1}'"));
+            if (!$serverIp) {
+                $tenant->update([
+                    'ssl_status' => 'dns_error',
+                    'last_error' => 'No fue posible obtener la IP del servidor para la verificación DNS.',
+                ]);
+                return redirect()->back()->with([
+                    'statusMessage' => "❌ DNS no verificado: no se pudo obtener la IP del servidor.",
+                    'tenant'        => $tenant->fresh(),
+                ]);
+            }
 
-        // 2. Crear bloque Nginx automáticamente
-        $nginxConfig = "
+            // IP pública del dominio según DNS
+            $dnsIp = gethostbyname($domain);
+
+            if ($serverIp === $dnsIp && filter_var($dnsIp, FILTER_VALIDATE_IP)) {
+                $tenant->update([
+                    'dns_verified'    => true,
+                    'dns_verified_at' => Carbon::now(),
+                ]);
+            } else {
+                $tenant->update([
+                    'ssl_status' => 'dns_error',
+                    'last_error' => "El dominio {$domain} no apunta a la IP del servidor ({$serverIp}). DNS actual: {$dnsIp}",
+                ]);
+
+                return redirect()->back()->with([
+                    'statusMessage' => "❌ DNS no verificado: El dominio no apunta a la IP del servidor ({$serverIp}). DNS: {$dnsIp}",
+                    'tenant'        => $tenant->fresh(),
+                ]);
+            }
+
+            /**
+             * 3) Emitir certificado con Certbot (modo no interactivo)
+             */
+            $issue = new Process([
+                'sudo', 'certbot', 'certonly',
+                '--nginx',
+                '-d', $domain,
+                '--non-interactive',
+                '--agree-tos',
+                '-m', 'soporte@tudominio.com',
+            ]);
+            $issue->setTimeout(600);
+            $issue->run();
+
+            if (!$issue->isSuccessful()) {
+                $tenant->update([
+                    'ssl_status' => 'error',
+                    'last_error' => $issue->getErrorOutput() ?: $issue->getOutput(),
+                ]);
+                throw new ProcessFailedException($issue);
+            }
+
+            /**
+             * 4) Registrar info del certificado en la BD
+             */
+            // Fecha de emisión (ahora)
+            $sslIssuedAt = Carbon::now();
+
+            // Fecha de expiración desde cert.pem
+            // Ejemplo salida: notAfter=Nov 21 12:34:56 2025 GMT
+            $endDateRaw = trim(shell_exec("sudo openssl x509 -enddate -noout -in {$certPath}/cert.pem | cut -d= -f2"));
+            // Fallback si falla la lectura del certificado
+            $sslExpiresAt = null;
+            try {
+                if (!empty($endDateRaw)) {
+                    $sslExpiresAt = Carbon::parse($endDateRaw);
+                }
+            } catch (\Throwable $t) {
+                // Si no se puede parsear, deja null y almacena aviso
+                $tenant->update([
+                    'last_error' => ($tenant->last_error ? $tenant->last_error . ' | ' : '') .
+                        "No se pudo parsear la fecha de expiración del certificado: {$endDateRaw}"
+                ]);
+            }
+
+            $tenant->update([
+                'ssl_status'       => 'active',
+                'certificate_path' => $certPath,
+                'ssl_issued_at'    => $sslIssuedAt,
+                'ssl_expires_at'   => $sslExpiresAt,
+            ]);
+
+            /**
+             * 5) Crear bloque Nginx para el dominio y forzar HTTPS
+             */
+            $nginxConfig = "
 server {
     listen 80;
     server_name {$domain};
@@ -175,14 +259,17 @@ server {
 }
 
 server {
-    listen 443 ssl;
+    listen 443 ssl http2;
     server_name {$domain};
 
-    ssl_certificate /etc/letsencrypt/live/{$domain}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/{$domain}/privkey.pem;
+    ssl_certificate {$certPath}/fullchain.pem;
+    ssl_certificate_key {$certPath}/privkey.pem;
 
-    root /var/www/{$domain}/public;
+    root /var/www/laravel_app/public;
     index index.php index.html;
+
+    add_header X-Frame-Options \"SAMEORIGIN\";
+    add_header X-Content-Type-Options \"nosniff\";
 
     location / {
         try_files \$uri \$uri/ /index.php?\$query_string;
@@ -190,22 +277,76 @@ server {
 
     location ~ \.php\$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_pass {$phpFpmSocket};
         fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
         include fastcgi_params;
     }
+
+    location ~ /\.ht {
+        deny all;
+    }
 }
 ";
-        $filePath = "/etc/nginx/sites-available/{$domain}";
-        file_put_contents($filePath, $nginxConfig);
-        symlink($filePath, "/etc/nginx/sites-enabled/{$domain}");
 
-        // 3. Recargar Nginx
-        (new Process(['systemctl', 'reload', 'nginx']))->run();
+            $filePath = "/etc/nginx/sites-available/{$domain}";
 
-        return back()->with('success', "Tenant {$domain} creado con SSL y bloque Nginx.");
+            $writeCfg = Process::fromShellCommandline("echo \"$nginxConfig\" | sudo tee {$filePath}");
+            $writeCfg->run();
+            if (!$writeCfg->isSuccessful()) {
+                $tenant->update([
+                    'ssl_status' => 'error',
+                    'last_error' => "No se pudo escribir la config Nginx: " .
+                        ($writeCfg->getErrorOutput() ?: $writeCfg->getOutput()),
+                ]);
+                throw new ProcessFailedException($writeCfg);
+            }
+
+            $enableCfg = new Process(['sudo', 'ln', '-sf', $filePath, "/etc/nginx/sites-enabled/{$domain}"]);
+            $enableCfg->run();
+            if (!$enableCfg->isSuccessful()) {
+                $tenant->update([
+                    'ssl_status' => 'error',
+                    'last_error' => "No se pudo habilitar la config Nginx: " .
+                        ($enableCfg->getErrorOutput() ?: $enableCfg->getOutput()),
+                ]);
+                throw new ProcessFailedException($enableCfg);
+            }
+
+            /**
+             * 6) Recargar Nginx
+             */
+            $reload = new Process(['sudo', 'systemctl', 'reload', 'nginx']);
+            $reload->run();
+            if (!$reload->isSuccessful()) {
+                $tenant->update([
+                    'ssl_status' => 'error',
+                    'last_error' => "No se pudo recargar Nginx: " .
+                        ($reload->getErrorOutput() ?: $reload->getOutput()),
+                ]);
+                throw new ProcessFailedException($reload);
+            }
+
+            // 7) Devolver a la vista con estado OK y datos del tenant
+            return redirect()->back()->with([
+                'statusMessage' => "✅ Tenant {$domain} creado correctamente, DNS verificado y SSL activo.",
+                'tenant'        => $tenant->fresh(),
+            ]);
+
+        } catch (\Throwable $e) {
+            // Mantén el estado dns_error si ya estaba así; si no, marca como error
+            $newStatus = $tenant->ssl_status === 'dns_error' ? 'dns_error' : 'error';
+
+            $tenant->update([
+                'ssl_status' => $newStatus,
+                'last_error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()->with([
+                'statusMessage' => "❌ Ocurrió un error creando el SSL/Nginx: " . $e->getMessage(),
+                'tenant'        => $tenant->fresh(),
+            ]);
+        }
     }
-
  
 }
 
