@@ -21,14 +21,30 @@
         </div>
     @endif
 
+    <!-- Errores de validación -->
+    @if($errors->any())
+        <div style="padding:10px; background:#fff3cd; color:#856404; border:1px solid #ffeeba; border-radius:5px; margin-bottom:15px;">
+            <ul style="margin:0; padding-left:20px;">
+                @foreach($errors->all() as $error)
+                    <li>⚠️ {{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <!-- Formulario -->
     <form action="{{ route('tenants.store') }}" method="POST">
         @csrf
         <div style="margin-bottom:10px;">
             <label for="domain">Dominio del Tenant:</label><br>
-            <input type="text" id="domain" name="domain" placeholder="ej: juanchaproducciones.com.co" required 
+            <input type="text" id="domain" name="domain"
+                   value="{{ old('domain') }}"
+                   placeholder="ej: juanchaproducciones.com.co"
+                   required
                    style="padding:8px; width:100%; max-width:400px; border:1px solid #ccc; border-radius:5px;">
         </div>
-        <button type="submit" 
+
+        <button type="submit"
                 style="padding:10px 20px; background:#007bff; color:white; border:none; border-radius:5px; cursor:pointer;">
             Crear Tenant
         </button>
