@@ -22,31 +22,11 @@ Route::get('certificate', 'Sitedigitalweb\Pagina\Http\TenantController@certifica
 Route::post('generate-ssl', [Sitedigitalweb\Pagina\Http\TenantController::class, 'generate'])->name('generate.ssl');
 Route::post('/tenants/ssl', [Sitedigitalweb\Pagina\Http\TenantController::class, 'createSSL'])->name('tenants.ssl');
 Route::resource('recaptcha', Sitedigitalweb\Pagina\Http\RecaptchaSettingController::class);
-Route::get('/grape-components', function () {
-  $template = 'juanchaproducciones';
-  $componentsPath = resource_path('views/'.$template);
-  $files = glob($componentsPath . '/*.blade.php');
-  $components = [];
-  foreach ($files as $file) {
-   $name = basename($file, '.blade.php');
-   $html = view("juanchaproducciones.$name")->render();
-   $components[] = [
-    'id' => $name,
-    'label' => ucfirst(str_replace('-', ' ', $name)),
-    'content' => $html,
-    'category' => 'Mis Componentes'
-   ];
-  }
-  return response()->json($components); 
- });
-
- Route::get('gestion/logo-head', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@logohead');
-
-
+Route::get('/grape-components', [Sitedigitalweb\Pagina\Http\TenantController::class, 'getGrapeComponents']);
+Route::get('gestion/logo-head', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@logohead');
 Route::get('components', [Sitedigitalweb\Pagina\Http\GrapejsController::class, 'getComponents'])->name('components.get');
-
 Route::post('save-component', [Sitedigitalweb\Pagina\Http\GrapejsController::class, 'store'])->name('components.store');
-
+Route::resource('configuration', 'Sitedigitalweb\Pagina\Http\ConfiguracionController');
 
 });
 });
@@ -69,7 +49,7 @@ Route::prefix('images')->group(function () {
 
 
 Route::group(['middleware' => ['auth','administrador']], function (){
-Route::resource('/gestor/ver-templates', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController');
+
 
 Route::get('/gestor/ver-config/publico', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@publico');
 Route::get('/gestor/ver-config/privado', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@privado');

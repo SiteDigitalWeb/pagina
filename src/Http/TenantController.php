@@ -29,6 +29,7 @@ use Mail;
 use DigitalsiteSaaS\Usuario\Usuario;
 use Auth;
 use Sitedigitalweb\Pagina\Cms_Pais;
+use Sitedigitalweb\Pagina\Cms_Template;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Carbon\Carbon;
@@ -136,6 +137,46 @@ return view('pagina::tenants.register', [
 
  }
 
+
+   public function getGrapeComponents(Request $request)
+    {
+        // Identificar el template desde la BD considerando el tenant
+        $templateQuery = ($this->tenantName
+            ? \Sitedigitalweb\Pagina\Tenant\Cms_Template::query()
+            : Cms_Template::query());
+
+        $cmsTemplate = $templateQuery->first();
+
+        if (!$cmsTemplate) {
+            return response()->json(['error' => 'No active template found'], 404);
+        }
+
+        $template = $cmsTemplate->template; // Campo donde está el nombre del template
+
+        $componentsPath = resource_path('views/' . $template);
+        $files = glob($componentsPath . '/*.blade.php');
+
+        if (empty($files)) {
+            return response()->json(['error' => 'No components found'], 404);
+        }
+
+        $components = [];
+
+        foreach ($files as $file) {
+            $name = basename($file, '.blade.php');
+            $html = view("$template.$name")->render();
+
+            $components[] = [
+                'id' => $name,
+                'label' => ucfirst(str_replace('-', ' ', $name)),
+                'content' => $html,
+                'category' => 'Mis Componentes',
+            ];
+        }
+
+        return response()->json($components);
+    }
+
 public function certificate()
 {
     return view('pagina::certificate.certificate');
@@ -238,9 +279,33 @@ public function store(Request $request)
          * 5) Crear bloque Nginx
          ============================== */
         $nginxConfig = <<<'EOL'
+
 server {
     listen 443 ssl http2;
-    server_name __DOMAIN__ www.__DOMAIN__;
+    server_name www.__DOMAIN__;
+
+    ssl_certificate /etc/letsencrypt/live/__DOMAIN__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/__DOMAIN__/privkey.pem;
+
+    return 301 https://__DOMAIN__$request_uri;
+}
+
+server {
+    listen 80;
+    server_name www.__DOMAIN__;
+    return 301 https://__DOMAIN__$request_uri;
+}
+
+# Redirección HTTP sin www -> HTTPS sin www
+server {
+    listen 80;
+    server_name __DOMAIN__;
+    return 301 https://__DOMAIN__$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name __DOMAIN__;
 
     ssl_certificate /etc/letsencrypt/live/__DOMAIN__/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/__DOMAIN__/privkey.pem;
