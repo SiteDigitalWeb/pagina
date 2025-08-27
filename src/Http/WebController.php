@@ -5,7 +5,7 @@
  use Sitedigitalweb\Pagina\Cms_Stadistics;
  use Sitedigitalweb\Pagina\WhatsappClick;
  use Sitedigitalweb\Pagina\Cms_Forms;
- use Sitedigitalweb\Pagina\Cms_Ips;
+ use Sitedigitalweb\Estadistica\Cms_Ips;
  use App\Models\RecaptchaSetting;
  use Mail;
  use DB;
@@ -190,7 +190,7 @@ public function estadistica()
     $tenant = $this->tenantName;
 
     $userModel = $tenant
-        ? \Sitedigitalweb\Pagina\Tenant\Cms_Ips::class
+        ? \Sitedigitalweb\Estadistica\Tenant\Cms_Ips::class
         : Cms_Ips::class;
 
     $user = $userModel::where('ip', $ip)->first();
