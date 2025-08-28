@@ -24,7 +24,7 @@ public function editor(Request $request)
 
     // Si estamos en tenant, simplemente usamos la base del tenant
     if ($website) {
-        $web = Cms_Template::first(); // Aquí no hay website_id
+        $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first(); // Aquí no hay website_id
     } else {
         // En la base central, también usamos sin filtro
         $web = Cms_Template::first(); // O con filtro si tú creaste website_id
