@@ -65,7 +65,7 @@ public function preview($id)
     $templateFolder = $web->template ?? 'default';
 
     // Render dinámico de la vista
-    return view($templateFolder . '.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 }
 
 
