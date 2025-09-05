@@ -38,12 +38,12 @@ public function editor(Request $request)
 public function preview($id)
 {
     if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
-        // Entorno tenant específico, sin usar website_id
+        // Entorno tenant específico
         $template = \Sitedigitalweb\Pagina\Tenant\Page::findOrFail($id);
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
     } else {
-        // Entorno central (host)
+        // Entorno central
         $template = Page::findOrFail($id);
         $recaptcha = Cms_Recaptcha::first();
         $web = Cms_Template::first();
@@ -61,11 +61,13 @@ public function preview($id)
         'tenant_name' => $website->name ?? null
     ];
 
+    // Aquí definimos la carpeta de plantilla desde BD
     $templateFolder = $web->template ?? 'default';
 
-
-    return view('pagina::pages.preview', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+    // Render dinámico de la vista
+    return view($templateFolder . '.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
 }
+
 
 
 public function page()
