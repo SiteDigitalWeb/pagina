@@ -234,12 +234,13 @@ public function store(Request $request)
          * 3) Emitir certificado con Certbot
          ============================== */
         $issue = new Process([
-            'sudo', 'certbot', 'certonly',
-            '--nginx', '-d', $domain,
-            '--non-interactive',
-            '--agree-tos',
-            '-m', 'soporte@tudominio.com',
-        ]);
+         'sudo', 'certbot', 'certonly',
+         '--nginx',
+         '-d', $domain, '-d', "www.{$domain}", // 👈 incluye ambas variantes
+         '--non-interactive',
+         '--agree-tos',
+         '-m', 'dario.martinez@sitedigital.com.co',
+]);
         $issue->setTimeout(600);
         $issue->run();
 

@@ -27,6 +27,8 @@ Route::get('gestion/logo-head', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionContro
 Route::get('components', [Sitedigitalweb\Pagina\Http\GrapejsController::class, 'getComponents'])->name('components.get');
 Route::post('save-component', [Sitedigitalweb\Pagina\Http\GrapejsController::class, 'store'])->name('components.store');
 Route::resource('configuration', 'Sitedigitalweb\Pagina\Http\ConfiguracionController');
+Route::get('view-templates', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@index');
+Route::get('location', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@verubicacion');
 
 });
 });
@@ -79,7 +81,7 @@ Route::post('gestion/contenidos/seoupdate', 'DigitalsiteSaaS\Pagina\Http\Configu
 Route::post('gestion/contenidos/redes-sociales', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@updatered');
 Route::get('gestion/recaptcha', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@recaptcha');
 Route::get('gestion/redes-sociales', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@verredes'); 
-Route::get('gestion/ubicacion', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@verubicacion');
+
 Route::get('gestion/seo', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@seo');
 Route::get('gestion/pais-editar/{id}', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@paiseditar'); 
 Route::post('gestion/editwhats/{id}', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@editarwhatsapp'); 

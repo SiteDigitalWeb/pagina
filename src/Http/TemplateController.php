@@ -42,11 +42,25 @@ public function preview($id)
         $template = \Sitedigitalweb\Pagina\Tenant\Page::findOrFail($id);
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
+        $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
+        ->where('visibility', 1)
+        ->orderBy('position', 'asc')
+        ->with(['children' => function ($query) {
+            $query->where('visibility', 1)->orderBy('position', 'asc');
+        }])
+        ->get();
     } else {
         // Entorno central
         $template = Page::findOrFail($id);
         $recaptcha = Cms_Recaptcha::first();
         $web = Cms_Template::first();
+        $menuPages = Page::whereNull('page_id')
+        ->where('visibility', 1)
+        ->orderBy('position', 'asc')
+        ->with(['children' => function ($query) {
+            $query->where('visibility', 1)->orderBy('position', 'asc');
+        }])
+        ->get();
     }
 
     $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
@@ -65,7 +79,7 @@ public function preview($id)
     $templateFolder = $web->template ?? 'default';
 
     // Render dinámico de la vista
-    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web'));
+    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages'));
 }
 
 

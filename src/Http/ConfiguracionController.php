@@ -15,7 +15,7 @@ use DigitalsiteSaaS\Pagina\Zippera;
 use DigitalsiteSaaS\Pagina\Color;
 use DigitalsiteSaaS\Pagina\Venta;
 use DigitalsiteSaaS\Pagina\Date;
-use DigitalsiteSaaS\Pagina\Paiscon;
+use Sitedigitalweb\Pagina\Cms_paiscon;
 use DigitalsiteSaaS\Pagina\Departamentocon;
 use DigitalsiteSaaS\Pagina\Pais;
 use DigitalsiteSaaS\Pagina\Municipio;
@@ -315,9 +315,9 @@ class ConfiguracionController extends Controller
 
     public function verubicacion(){
     if(!$this->tenantName){
-    $pais = Paiscon::all();
+    $pais = Cms_paiscon::all();
     }else{
-    $pais = \DigitalsiteSaaS\Pagina\Tenant\Paiscon::all();
+    $pais = \Sitedigitalweb\Pagina\Tenant\Cms_paiscon::all();
     }
     return View('pagina::configuracion.paises')->with('pais',$pais);
     }
