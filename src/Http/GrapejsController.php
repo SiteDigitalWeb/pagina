@@ -432,21 +432,25 @@ public function getComponents()
     }));
 }
 
-public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'content' => 'required|string'
-        ]);
+    public function store(Request $request){
+     $request->validate([
+     'name' => 'required|string|max:255',
+     'content' => 'required|string'
+     ]);
 
-        $component = new Cms_SavedComponent();
-        $component->label = $request->input('name');
-        $component->content = $request->input('content');
-        $component->category = 'Componentes Guardados';
-        $component->save();
+     $component = new Cms_SavedComponent();
+     $component->label = $request->input('name');
+     $component->content = $request->input('content');
+     $component->category = 'Componentes Guardados';
+     $component->save();
 
-        return response()->json(['success' => true]);
+      return response()->json(['success' => true]);
+     }
+
+    public function funel()
+   {
+    $funnels = \DB::table('cms_funel')->select('id', 'funel')->get(); 
+    return response()->json($funnels);
     }
-
 
 }

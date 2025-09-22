@@ -29,7 +29,8 @@ Route::post('save-component', [Sitedigitalweb\Pagina\Http\GrapejsController::cla
 Route::resource('configuration', 'Sitedigitalweb\Pagina\Http\ConfiguracionController');
 Route::get('view-templates', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@index');
 Route::get('location', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@verubicacion');
-
+Route::get('cms_funel', 'Sitedigitalweb\Pagina\Http\GrapejsController@funel');
+Route::get('menu', 'Sitedigitalweb\Pagina\Http\TemplateController@menu');
 });
 });
 

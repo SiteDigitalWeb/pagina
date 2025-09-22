@@ -133,6 +133,32 @@ public function page()
 }
 
 
+public function menu()
+    {
+        // Traemos páginas raíz con sus hijos
+        $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
+            ->where('visibility', 1)
+            ->orderBy('position', 'asc')
+            ->with(['children' => function ($query) {
+                $query->where('visibility', 1)->orderBy('position', 'asc');
+            }])
+            ->get();
+
+        // Formateamos recursivamente
+        $data = $menuPages->map(fn($page) => $this->transformPage($page));
+
+        return response()->json($data);
+    }
+
+    private function transformPage($page)
+    {
+        return [
+            'title' => $page->page,   // nombre de la página
+            'url' => url($page->slug), // slug convertido en URL
+            'children' => $page->children->map(fn($child) => $this->transformPage($child))->toArray()
+        ];
+    }
+
 public function pages($page)
 {
     if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
@@ -373,7 +399,7 @@ private function renderComponent($component)
         foreach ($components as $child) {
             if (in_array($child['type'] ?? '', [
                 'text-input', 'email-input', 'textarea-input',
-                'select-input', 'number-input', 'submit-input', 'date-input'
+                'select-input', 'number-input', 'submit-button', 'date-input'
             ])) {
                 $innerHtml .= $this->renderInputComponent($child);
             } else {
@@ -382,10 +408,25 @@ private function renderComponent($component)
         }
     }
 
-    // Si es un formulario dinámico, cambiar etiqueta a <form>
     if (($component['type'] ?? '') === 'dynamic-form') {
-        $tag = 'form';
+    $tag = 'form';
+
+    // Forzar method y action si no están definidos
+    if (empty($attributes['method'])) {
+        $attributes['method'] = 'post';
     }
+    if (empty($attributes['action'])) {
+        $attributes['action'] = '/cms/registro';
+    }
+
+    // Insertar el input hidden para funel_id
+    $funelId = $component['funel_id'] ?? ($attributes['funel_id'] ?? null);
+    if (!empty($funelId)) {
+        $innerHtml = '<input type="hidden" name="funel_id" value="' . htmlspecialchars($funelId) . '">' . $innerHtml;
+    }
+}
+
+    
 
     // Construir y retornar HTML final
     return $this->buildFinalHtml($tag, $attrString, $innerHtml, $isImage);
@@ -503,7 +544,7 @@ private function renderInputComponent($component)
         case 'select-input':
             $tag = 'select';
             break;
-        case 'submit-input':
+        case 'submit-button':
             $tag = 'button';
             $attributes['type'] = 'submit';
             $content = !empty($value) ? $value : $label; // Usar value si no está vacío, sino usar label
@@ -881,7 +922,7 @@ private function fixSubmitButtonValue(array $components): array
         // Mover "value" dentro de "attributes" si el type es "submit-input"
         if (
             isset($component['type']) && 
-            $component['type'] === 'submit-input' && 
+            $component['type'] === 'submit-button' && 
             isset($component['value'])
         ) {
             // Aseguramos que 'attributes' existe como array
