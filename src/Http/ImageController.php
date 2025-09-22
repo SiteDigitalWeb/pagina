@@ -30,7 +30,8 @@ class ImageController extends Controller
     $uploadedAssets = [];
 
     $website = app(\Hyn\Tenancy\Environment::class)->website();
-    $uuid = $website->uuid;
+ 
+    $uuid = $website ? $website->uuid : 'default';
 
     $storagePath = public_path("saas/{$uuid}");
 
@@ -78,11 +79,9 @@ public function index()
 {
     $website = app(\Hyn\Tenancy\Environment::class)->website();
 
-    if (!$website) {
-        return response()->json(['error' => 'No se detectó tenant'], 404);
-    }
+    // Si no hay tenant o el uuid está vacío, usar "default"
+    $uuid = $website && !empty($website->uuid) ? $website->uuid : 'default';
 
-    $uuid = $website->uuid;
     $folderPath = public_path("saas/{$uuid}");
     $images = [];
 
@@ -92,7 +91,7 @@ public function index()
         foreach ($files as $file) {
             if (Str::startsWith(File::mimeType($file), 'image/')) {
                 $images[] = [
-                    'url'  => url("saas/{$uuid}/" . $file->getFilename()),
+                    'url'  => asset("saas/{$uuid}/" . $file->getFilename()),
                     'name' => $file->getFilename(),
                     'path' => "saas/{$uuid}/" . $file->getFilename(),
                 ];
@@ -102,6 +101,7 @@ public function index()
 
     return response()->json($images);
 }
+
 
 
     /**
