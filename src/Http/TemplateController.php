@@ -75,11 +75,18 @@ public function preview($id)
         'tenant_name' => $website->name ?? null
     ];
 
+    $seo = [
+        'title'       => $template->title ?? $template->name,
+        'description' => $template->description ?? Str::limit(strip_tags($template->content), 160),
+        'keywords'    => $template->keywords ?? '',
+        'url'         => url()->current(),
+    ];
+
     // Aquí definimos la carpeta de plantilla desde BD
     $templateFolder = $web->template ?? 'default';
 
     // Render dinámico de la vista
-    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages'));
+    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo'));
 }
 
 
