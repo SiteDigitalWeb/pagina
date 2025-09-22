@@ -129,13 +129,15 @@ public function update(StorePageRequest $request, $id)
 
         $idioma = strtolower($request->input('language'));
 
-        $pageData = [
+        $slugInput = trim($request->input('slug'), '/'); // limpio los slashes extra
+
+$pageData = [
     'page' => $request->input('page'),
     'slugcon' => $request->input('slug'),
     'slug' => match ($idioma) {
-        'ne' => '/',
-        'es', 'en', 'fr' => '/' . $idioma,
-        default => $request->input('slug'), // por si llega otro idioma
+        'ne' => $slugInput, // neutro => solo "casa"
+        'es', 'en', 'fr' => $idioma . '/' . $slugInput, // idioma => "es/casa"
+        default => $slugInput, // fallback
     },
     'title' => $request->input('title'),
     'description' => $request->input('description'),

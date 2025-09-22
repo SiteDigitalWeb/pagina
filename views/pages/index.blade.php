@@ -102,7 +102,7 @@
                                                 <td>{{ $subpage->updated_at->format('d/m/Y H:i') }}</td>
                                                 <td>
                                                     <div class="btn-group">
-                                                        <a href="/editor/sitecms?page={{$subpage->id}}" class="btn btn-warning btn-sm" title="Ver contenidos">
+                                                        <a href="/sd/editor?load={{$subpage->id}}" class="btn btn-warning btn-sm" title="Ver contenidos">
                                                             <i class="gi gi-imac"></i>
                                                         </a>
                                                         <a href="/sd/pages/{{ $subpage->id }}/edit" class="btn btn-info btn-sm" title="Editar página">
