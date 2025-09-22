@@ -125,10 +125,17 @@ public function page()
         'tenant_name' => $website->name ?? null
     ];
 
+    $seo = [
+        'title'       => $template->title ?? $template->name,
+        'description' => $template->description ?? Str::limit(strip_tags($template->content), 160),
+        'keywords'    => $template->keywords ?? '',
+        'url'         => url()->current(),
+    ];
+
     // Suponiendo que en cms_template tienes una columna 'template_name'
     $templateFolder = $web->template ?? 'default';
 
-    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages'));
+    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo'));
 
 }
 
@@ -199,9 +206,16 @@ public function pages($page)
         'tenant_name' => $website->name ?? null
     ];
 
+    $seo = [
+        'title'       => $template->title ?? $template->name,
+        'description' => $template->description ?? Str::limit(strip_tags($template->content), 160),
+        'keywords'    => $template->keywords ?? '',
+        'url'         => url()->current(),
+    ];
+
     $templateFolder = $web->template ?? 'default';
     
-      return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages'));
+      return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo'));
 
 }
 
