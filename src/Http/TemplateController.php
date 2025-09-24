@@ -899,6 +899,7 @@ public function getThemeData()
 
 public function themeCss()
 {
+    // Primero intenta cargar los datos del theme activo, si no existe carga los defaults
     $theme = Cms_Theme::first() ?? Cms_variable::first();
 
     if (!$theme) {
@@ -908,14 +909,32 @@ public function themeCss()
     $css = "";
 
     // ======================
-    // COLORES
+    // DEFINIR VARIABLES EN :root
+    // ======================
+    $css .= ":root {\n";
+    for ($i = 1; $i <= 4; $i++) {
+        $colorValue = $theme->{'color_'.$i} ?? null;
+        if ($colorValue) {
+            $css .= "    --color-{$i}: {$colorValue} !important;\n";
+        }
+    }
+    for ($i = 1; $i <= 5; $i++) {
+        $sizeValue = $theme->{'size_h'.$i} ?? 16;
+        $fontValue = $theme->{'font_h'.$i} ?? 'Roboto';
+        $css .= "    --font-h{$i}: '{$fontValue}', sans-serif !important;\n";
+        $css .= "    --size-h{$i}: {$sizeValue}px !important;\n";
+    }
+    $css .= "}\n\n";
+
+    // ======================
+    // CLASES DE COLORES
     // ======================
     for ($i = 1; $i <= 4; $i++) {
         $colorClass = $theme->{'var_color_'.$i} ?? null;
         $colorValue = $theme->{'color_'.$i} ?? null;
 
         if ($colorClass && $colorValue) {
-            $css .= ".{$colorClass} { background: {$colorValue} !important; }\n";
+            $css .= ".{$colorClass} { background: var(--color-{$i}) !important; }\n";
         }
     }
 
@@ -926,12 +945,10 @@ public function themeCss()
     // ======================
     for ($i = 1; $i <= 5; $i++) {
         $fontClass = $theme->{'var_font_h'.$i} ?? 'h'.$i;
-        $sizeValue = $theme->{'size_h'.$i} ?? 16;
-        $fontValue = $theme->{'font_h'.$i} ?? 'Roboto';
 
-        $css .= "{$fontClass} { ";
-        $css .= "font-family: '{$fontValue}', sans-serif !important; ";
-        $css .= "font-size: {$sizeValue}px !important; ";
+        $css .= "{$fontClass} {\n";
+        $css .= "    font-family: var(--font-h{$i});\n";
+        $css .= "    font-size: var(--size-h{$i});\n";
         $css .= "}\n";
     }
 
