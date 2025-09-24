@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="csrf-token" content="{{ csrf_token() }}">
-
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
   <title>{{ isset($templateId) ? 'Editar' : 'Nueva' }} Plantilla</title>
   
@@ -20,7 +19,9 @@
   href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"
 />
  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <style>
     body, html {
       margin: 0;
@@ -195,15 +196,19 @@
       @endif
       <span id="status-message" class="status-message" style="display: none;"></span>
     </div>
+    
     <div class="panel__actions">
-      <button id="preview-btn" class="action-btn preview-btn" disabled>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#formModal">
+  Abrir Formulario
+</button>
+      <button id="preview-btn" class="action-btn preview-btn btn-sm" disabled>
         Vista Previa
       </button>
-      <button id="save-btn" class="action-btn save-btn">
+      <button id="save-btn" class="action-btn save-btn btn-sm">
         {{ isset($templateId) ? 'Actualizar' : 'Guardar' }}
       </button>
-      <button id="clear-btn" class="btn btn-danger">🗑 Limpiar Todo</button>
-      <button id="save-component-btn" class="btn btn-primary">💾 Guardar Componente</button>
+      <button id="clear-btn" class="btn btn-danger btn-sm">🗑 Limpiar Todo</button>
+      <button id="save-component-btn" class="btn btn-primary btn-sm">💾 Guardar Componente</button>
 
     </div>
   </div>
@@ -901,6 +906,134 @@ document.getElementById('clear-btn').addEventListener('click', clearEditorConten
 
 
 </script>
+
+<div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="popupForm">
+        @csrf
+        <div class="modal-header">
+          <h5 class="modal-title">Configuración de Tema</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Colores -->
+          <h6>Colores</h6>
+          <div class="row mb-3">
+            @for($i = 1; $i <= 4; $i++)
+            <div class="col-md-3">
+              <label for="color_{{ $i }}" class="form-label">Color {{ $i }}</label>
+              <input type="color" name="color_{{ $i }}" id="color_{{ $i }}" class="form-control"
+                     value="{{ $theme->{'color_'.$i} ?? '#ffffff' }}">
+            </div>
+            <!-- Variable CSS oculta -->
+            <input type="hidden" name="var_color_{{ $i }}" 
+                   value="{{ $theme->{'var_color_'.$i} ?? '--color-'.$i }}">
+            @endfor
+          </div>
+
+          <!-- Tipografía y Tamaño -->
+          <h6>Tipografía H1-H5</h6>
+          <div class="row">
+            @for($i = 1; $i <= 5; $i++)
+            <div class="col-md-3 mb-3">
+              <label class="form-label">H{{ $i }} Fuente</label>
+              <select name="font_h{{ $i }}" class="form-select font-select" data-h="{{ $i }}">
+                <option value="">-- Selecciona fuente --</option>
+              </select>
+            </div>
+            <div class="col-md-2 mb-3">
+              <label class="form-label">H{{ $i }} Tamaño (px)</label>
+              <input type="number" name="size_h{{ $i }}" class="form-control" min="10" max="100"
+                     value="{{ $theme->{'size_h'.$i} ?? 24 }}">
+            </div>
+            <!-- Variables CSS ocultas -->
+            <input type="hidden" name="var_font_h{{ $i }}" 
+                   value="{{ $theme->{'var_font_h'.$i} ?? '--font-h'.$i }}">
+            <input type="hidden" name="var_size_h{{ $i }}" 
+                   value="{{ $theme->{'var_size_h'.$i} ?? '--size-h'.$i }}">
+            @endfor
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Guardar Tema</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+$(document).ready(function () {
+    const googleFonts = [
+        "Roboto", "Open Sans", "Lato", "Montserrat", "Oswald", 
+        "Raleway", "Merriweather", "Poppins", "Ubuntu", "Playfair Display"
+    ];
+
+    // Función para cargar Google Fonts en cada select
+    function loadFontSelects() {
+        $('.font-select').each(function () {
+            const select = $(this);
+            const selectedFont = select.data('selected');
+            select.empty().append('<option value="">-- Selecciona fuente --</option>');
+            googleFonts.forEach(font => {
+                const selected = selectedFont === font ? 'selected' : '';
+                select.append(`<option value="${font}" ${selected}>${font}</option>`);
+            });
+        });
+    }
+
+    // Cargar datos actuales cuando se abre el modal
+    $('#formModal').on('show.bs.modal', function () {
+        $.get('/sd/popup/data', function(data){
+            // Colores y variables ocultas
+            for(let i = 1; i <= 4; i++) {
+                $('#color_'+i).val(data['color_'+i] ?? '#ffffff');
+                $(`input[name="var_color_${i}"]`).val(data['var_color_'+i] ?? `--color-${i}`);
+            }
+
+            // Tipografía, tamaños y variables ocultas
+            for(let i = 1; i <= 5; i++) {
+                const fontSelect = $(`select[name="font_h${i}"]`);
+                fontSelect.data('selected', data['font_h'+i] ?? 'Roboto');
+                $(`input[name="size_h${i}"]`).val(data['size_h'+i] ?? 24);
+                $(`input[name="var_font_h${i}"]`).val(data['var_font_h'+i] ?? `--font-h${i}`);
+                $(`input[name="var_size_h${i}"]`).val(data['var_size_h'+i] ?? `--size-h${i}`);
+            }
+
+            loadFontSelects();
+        }).fail(function() {
+            alert('Error al cargar los datos del tema');
+        });
+    });
+
+    // Guardar tema vía AJAX
+    $('#popupForm').on('submit', function (e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/sd/popup',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function (response) {
+                if(response.status === 'success'){
+                    alert(response.message);
+                    $('#formModal').modal('hide');
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function (xhr) {
+                console.error(xhr.responseText);
+                alert('Ocurrió un error al enviar el formulario');
+            }
+        });
+    });
+});
+</script>
+
 
 
 @include($web->template . '.assets-web.assets-grapejs')

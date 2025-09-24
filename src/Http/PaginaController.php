@@ -128,31 +128,34 @@ public function update(StorePageRequest $request, $id)
         }
 
         $idioma = strtolower($request->input('language'));
+        $slugInput = $request->input('slug'); // no hacemos trim('/')
 
-        $slugInput = trim($request->input('slug'), '/'); // limpio los slashes extra
+        // Normalización del slug según idioma
+        $finalSlug = match ($idioma) {
+            'ne' => $slugInput === '/' ? '/' : trim($slugInput, '/'),
+            'es', 'en', 'fr' => $slugInput === '/' 
+                ? '/' 
+                : $idioma . '/' . ltrim($slugInput, '/'),
+            default => $slugInput === '/' ? '/' : trim($slugInput, '/'),
+        };
 
-$pageData = [
-    'page' => $request->input('page'),
-    'slugcon' => $request->input('slug'),
-    'slug' => match ($idioma) {
-        'ne' => $slugInput, // neutro => solo "casa"
-        'es', 'en', 'fr' => $idioma . '/' . $slugInput, // idioma => "es/casa"
-        default => $slugInput, // fallback
-    },
-    'title' => $request->input('title'),
-    'description' => $request->input('description'),
-    'keywords' => $request->input('keywords'),
-    'position' => $request->input('position'),
-    'menu_type' => $request->input('menu_type'),
-    'visibility' => $request->input('visibility'),
-    'visibility_ecommerce' => $request->input('visibility_ecommerce'),
-    'visibility_blog' => $request->input('visibility_blog'),
-    'language' => $idioma,
-    'pixel' => $request->input('pixel'),
-    'follow' => $request->input('follow'),
-    'page_id' => $request->input('page_id'),
-];
-
+        $pageData = [
+            'page' => $request->input('page'),
+            'slugcon' => $slugInput,
+            'slug' => $finalSlug,
+            'title' => $request->input('title'),
+            'description' => $request->input('description'),
+            'keywords' => $request->input('keywords'),
+            'position' => $request->input('position'),
+            'menu_type' => $request->input('menu_type'),
+            'visibility' => $request->input('visibility'),
+            'visibility_ecommerce' => $request->input('visibility_ecommerce'),
+            'visibility_blog' => $request->input('visibility_blog'),
+            'language' => $idioma,
+            'pixel' => $request->input('pixel'),
+            'follow' => $request->input('follow'),
+            'page_id' => $request->input('page_id'),
+        ];
 
         $page->update($pageData);
 
@@ -172,6 +175,7 @@ $pageData = [
             ]);
     }
 }
+
 
 
 public function edit($id)

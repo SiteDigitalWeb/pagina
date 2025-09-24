@@ -9,6 +9,8 @@ use Sitedigitalweb\Pagina\Cms_Stadistics;
 use Sitedigitalweb\Pagina\Cms_Recaptcha;
 use Sitedigitalweb\Pagina\Cms_Template;
 use Illuminate\Support\Facades\Schema;
+use Sitedigitalweb\Pagina\Cms_Theme;
+use Sitedigitalweb\Pagina\Cms_variable;
 use DB;
 
 
@@ -770,6 +772,175 @@ private function extractHtmlFromComponents($components)
     return $html;
 }
 
+
+public function showForm()
+{
+    // Traer el único registro
+    $theme = Cms_Theme::first();
+    return view('pagina::pages.editor', compact('theme'));
+}
+
+public function theme(Request $request)
+{
+    $validated = $request->validate([
+        'template_id' => 'nullable|integer|max:100',
+        'theme'       => 'nullable|string|max:150',
+        'color_1' => 'nullable|string|max:7',
+        'color_2' => 'nullable|string|max:7',
+        'color_3' => 'nullable|string|max:7',
+        'color_4' => 'nullable|string|max:7',
+        'font_h1' => 'nullable|string|max:50',
+        'font_h2' => 'nullable|string|max:50',
+        'font_h3' => 'nullable|string|max:50',
+        'font_h4' => 'nullable|string|max:50',
+        'font_h5' => 'nullable|string|max:50',
+        'size_h1' => 'nullable|integer|min:10|max:100',
+        'size_h2' => 'nullable|integer|min:10|max:100',
+        'size_h3' => 'nullable|integer|min:10|max:100',
+        'size_h4' => 'nullable|integer|min:10|max:100',
+        'size_h5' => 'nullable|integer|min:10|max:100',
+    ]);
+
+    try {
+        // Si existe cms_theme actualiza
+        $theme = Cms_Theme::first();
+
+        if (!$theme) {
+            // Si no hay cms_theme, crea uno nuevo con los datos de cms_variable
+            $variable = Cms_variable::first();
+            $theme = Cms_Theme::create(array_merge(
+                (array) $variable ?? [],
+                $validated
+            ));
+        } else {
+            $theme->update($validated);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Formulario enviado correctamente ✅',
+            'data'    => $theme
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Hubo un problema al guardar el formulario',
+            'error'   => $e->getMessage()
+        ], 500);
+    }
+}
+
+
+public function getThemeData()
+{
+
+    $template = Cms_template::first(); // o con un campo is_active
+
+    // Trae primero el tema activo
+    $theme = Cms_Theme::first();
+
+    if (!$theme) {
+        // Si no hay theme, trae el primer registro de variables
+        $theme = Cms_variable::where('template_id', $template->id)->first();
+    }
+
+
+    // Si tampoco hay variables, crear valores por defecto
+    if (!$theme) {
+        $theme = (object)[
+            // Colores
+            'color_1' => '#ffffff',
+            'color_2' => '#ffffff',
+            'color_3' => '#ffffff',
+            'color_4' => '#ffffff',
+            'var_color_1' => '--color-1',
+            'var_color_2' => '--color-2',
+            'var_color_3' => '--color-3',
+            'var_color_4' => '--color-4',
+            // Tipografía
+            'font_h1' => 'Roboto',
+            'font_h2' => 'Roboto',
+            'font_h3' => 'Roboto',
+            'font_h4' => 'Roboto',
+            'font_h5' => 'Roboto',
+            'var_font_h1' => '--font-h1',
+            'var_font_h2' => '--font-h2',
+            'var_font_h3' => '--font-h3',
+            'var_font_h4' => '--font-h4',
+            'var_font_h5' => '--font-h5',
+            // Tamaños
+            'size_h1' => 24,
+            'size_h2' => 22,
+            'size_h3' => 20,
+            'size_h4' => 18,
+            'size_h5' => 16,
+            'var_size_h1' => '--size-h1',
+            'var_size_h2' => '--size-h2',
+            'var_size_h3' => '--size-h3',
+            'var_size_h4' => '--size-h4',
+            'var_size_h5' => '--size-h5',
+        ];
+    } else {
+        // Si existe theme o variable, asegurarse de que todos los var_* existan
+        for ($i = 1; $i <= 4; $i++) {
+            $theme->{'var_color_'.$i} = $theme->{'var_color_'.$i} ?? '--color-'.$i;
+        }
+        for ($i = 1; $i <= 5; $i++) {
+            $theme->{'var_font_h'.$i} = $theme->{'var_font_h'.$i} ?? '--font-h'.$i;
+            $theme->{'var_size_h'.$i} = $theme->{'var_size_h'.$i} ?? '--size-h'.$i;
+        }
+    }
+
+    return response()->json($theme);
+}
+
+
+
+public function themeCss()
+{
+    $theme = Cms_Theme::first() ?? Cms_variable::first();
+
+    if (!$theme) {
+        abort(404, 'Tema no configurado');
+    }
+
+    $css = "";
+
+    // ======================
+    // COLORES
+    // ======================
+    for ($i = 1; $i <= 4; $i++) {
+        $colorClass = $theme->{'var_color_'.$i} ?? null;
+        $colorValue = $theme->{'color_'.$i} ?? null;
+
+        if ($colorClass && $colorValue) {
+            $css .= ".{$colorClass} { background: {$colorValue} !important; }\n";
+        }
+    }
+
+    $css .= "\n";
+
+    // ======================
+    // TIPOGRAFÍAS Y TAMAÑOS
+    // ======================
+    for ($i = 1; $i <= 5; $i++) {
+        $fontClass = $theme->{'var_font_h'.$i} ?? 'h'.$i;
+        $sizeValue = $theme->{'size_h'.$i} ?? 16;
+        $fontValue = $theme->{'font_h'.$i} ?? 'Roboto';
+
+        $css .= "{$fontClass} { ";
+        $css .= "font-family: '{$fontValue}', sans-serif !important; ";
+        $css .= "font-size: {$sizeValue}px !important; ";
+        $css .= "}\n";
+    }
+
+    return response($css, 200)->header('Content-Type', 'text/css');
+}
+
+
+
+
 private function extractComponentHtml($component)
 {
     if (isset($component['content'])) {
@@ -833,7 +1004,8 @@ private function isJson($string)
         'content' => $contentWithoutScripts,
         'styles'  => $validated['styles'],
         'assets'  => $validated['assets'] ?? null,
-        'scripts' => $scripts
+        'scripts' => $scripts,
+        'theme'   => $validated['theme'] ?? null // 
     ];
 
     // Obtener el contexto del sitio actual (multi-tenant)

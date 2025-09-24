@@ -34,7 +34,8 @@ class Page extends Model
         'content' => 'array',
         'styles' => 'array',
         'scripts' => 'array',
-        'assets' => 'array', // scripts como texto plano (puede contener código JS)
+        'assets' => 'array',
+        'theme'  => 'array', // scripts como texto plano (puede contener código JS)
     ];
 
   public $timestamps = true;

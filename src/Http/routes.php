@@ -31,10 +31,17 @@ Route::get('view-templates', 'Sitedigitalweb\Pagina\Http\ConfiguracionController
 Route::get('location', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@verubicacion');
 Route::get('cms_funel', 'Sitedigitalweb\Pagina\Http\GrapejsController@funel');
 Route::get('menu', 'Sitedigitalweb\Pagina\Http\TemplateController@menu');
+Route::get('popup', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'showForm'])->name('popup.form');
+ Route::post('popup', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'theme'])->name('popup.store');
+ Route::get('popup/data', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'getThemeData'])->name('popup.data');
+
+
+
 });
 });
 
 
+Route::get('/sd/theme.css', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'themeCss'])->name('theme.css');
 
 
 
@@ -135,6 +142,7 @@ Route::get('gestion/municipios/{id}', 'DigitalsiteSaaS\Pagina\Http\Configuracion
 
 
 Route::group(['middleware' => ['web']], function (){
+
   Route::post('/tenants', [Sitedigitalweb\Pagina\Http\TenantController::class, 'store'])->name('tenants.store');
 Route::post('/whatsapp-track', [DigitalsiteSaaS\Pagina\Http\WebController::class, 'trackClick'])->name('whatsapp.track');
 Route::get('robots.txt', 'DigitalsiteSaaS\Pagina\Http\WebController@robot');
