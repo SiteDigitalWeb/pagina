@@ -35,8 +35,6 @@ Route::get('popup', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'show
  Route::post('popup', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'theme'])->name('popup.store');
  Route::get('popup/data', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'getThemeData'])->name('popup.data');
 
-
-
 });
 });
 

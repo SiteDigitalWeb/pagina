@@ -9,7 +9,7 @@ use Sitedigitalweb\Pagina\Cms_Stadistics;
 use Sitedigitalweb\Pagina\Cms_Recaptcha;
 use Sitedigitalweb\Pagina\Cms_Template;
 use Illuminate\Support\Facades\Schema;
-use Sitedigitalweb\Pagina\Cms_Theme;
+use Sitedigitalweb\Pagina\Cms_theme;
 use Sitedigitalweb\Pagina\Cms_variable;
 use DB;
 
