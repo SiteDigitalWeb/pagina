@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Schema;
 use Sitedigitalweb\Pagina\Cms_theme;
 use Sitedigitalweb\Pagina\Cms_variable;
 use DB;
+use File;
 
 
 class TemplateController extends Controller
@@ -954,7 +955,66 @@ public function themeCss()
 }
 
 
+public function generateThemeCss()
+{
+    // Primero intenta cargar los datos del theme activo, si no existe carga los defaults
+    $theme = Cms_Theme::first() ?? Cms_variable::first();
 
+    if (!$theme) {
+        abort(404, 'Tema no configurado');
+    }
+
+    $css = "";
+
+    // ======================
+    // DEFINIR VARIABLES EN :root
+    // ======================
+    $css .= ":root {\n";
+    for ($i = 1; $i <= 4; $i++) {
+        $colorValue = $theme->{'color_'.$i} ?? null;
+        if ($colorValue) {
+            $css .= "    --color-{$i}: {$colorValue};\n";
+        }
+    }
+    for ($i = 1; $i <= 5; $i++) {
+        $sizeValue = $theme->{'size_h'.$i} ?? 16;
+        $fontValue = $theme->{'font_h'.$i} ?? 'Roboto';
+        $css .= "    --font-h{$i}: '{$fontValue}', sans-serif;\n";
+        $css .= "    --size-h{$i}: {$sizeValue}px;\n";
+    }
+    $css .= "}\n\n";
+
+    // ======================
+    // CLASES DE COLORES
+    // ======================
+    for ($i = 1; $i <= 4; $i++) {
+        $colorClass = $theme->{'var_color_'.$i} ?? null;
+        if ($colorClass) {
+            $css .= ".{$colorClass} { background: var(--color-{$i}) !important; }\n";
+        }
+    }
+
+    $css .= "\n";
+
+    // ======================
+    // TIPOGRAFÍAS Y TAMAÑOS
+    // ======================
+    for ($i = 1; $i <= 5; $i++) {
+        $fontClass = $theme->{'var_font_h'.$i} ?? 'h'.$i;
+
+        $css .= "{$fontClass} {\n";
+        $css .= "    font-family: var(--font-h{$i}) !important;\n";
+        $css .= "    font-size: var(--size-h{$i}) !important;\n";
+        $css .= "}\n";
+    }
+
+    // ======================
+    // GUARDAR EN /public/theme.css
+    // ======================
+    File::put(public_path('theme.css'), $css);
+
+    return back()->with('success', 'Archivo theme.css generado en /public');
+}
 
 
 private function extractComponentHtml($component)

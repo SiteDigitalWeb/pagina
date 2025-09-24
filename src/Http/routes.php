@@ -39,9 +39,9 @@ Route::get('popup', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'show
 });
 
 
-Route::get('/sd/theme.css', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'themeCss'])->name('theme.css');
+Route::get('/sd/themes.css', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'themeCss'])->name('theme.css');
 
-
+Route::get('/generate-theme-css', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'generateThemeCss']);
 
 Route::prefix('images')->group(function () {
     // Ruta para subir una o varias imágenes
