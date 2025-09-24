@@ -781,6 +781,8 @@ public function showForm()
     return view('pagina::pages.editor', compact('theme'));
 }
 
+
+
 public function theme(Request $request)
 {
     $validated = $request->validate([
@@ -817,9 +819,45 @@ public function theme(Request $request)
             $theme->update($validated);
         }
 
+        // ======================
+        // GENERAR / ACTUALIZAR theme.css
+        // ======================
+        $css = ":root {\n";
+        for ($i = 1; $i <= 4; $i++) {
+            $color = $theme->{'color_'.$i} ?? '#000000';
+            $css .= "    --color-{$i}: {$color};\n";
+        }
+        for ($i = 1; $i <= 5; $i++) {
+            $font = $theme->{'font_h'.$i} ?? 'Roboto';
+            $size = $theme->{'size_h'.$i} ?? 16;
+            $css .= "    --font-h{$i}: '{$font}', sans-serif;\n";
+            $css .= "    --size-h{$i}: {$size}px;\n";
+        }
+        $css .= "}\n\n";
+
+        // Clases de color
+        for ($i = 1; $i <= 4; $i++) {
+            $colorClass = $theme->{'var_color_'.$i} ?? null;
+            if ($colorClass) {
+                $css .= ".{$colorClass} { background: var(--color-{$i}) !important; }\n";
+            }
+        }
+
+        // Tipografías y tamaños
+        for ($i = 1; $i <= 5; $i++) {
+            $fontClass = $theme->{'var_font_h'.$i} ?? 'h'.$i;
+            $css .= "{$fontClass} {\n";
+            $css .= "    font-family: var(--font-h{$i}) !important;\n";
+            $css .= "    font-size: var(--size-h{$i}) !important;\n";
+            $css .= "}\n";
+        }
+
+        // Guardar en public/theme.css
+        File::put(public_path('theme.css'), $css);
+
         return response()->json([
             'status'  => 'success',
-            'message' => 'Formulario enviado correctamente ✅',
+            'message' => 'Formulario enviado y theme.css generado ✅',
             'data'    => $theme
         ], 200);
 
@@ -831,6 +869,7 @@ public function theme(Request $request)
         ], 500);
     }
 }
+
 
 
 public function getThemeData()
@@ -902,7 +941,6 @@ public function themeCss()
 {
     // Primero intenta cargar los datos del theme activo, si no existe carga los defaults
     $theme = Cms_Theme::first() ?? Cms_variable::first();
-
     if (!$theme) {
         abort(404, 'Tema no configurado');
     }
@@ -957,24 +995,16 @@ public function themeCss()
 
 public function generateThemeCss()
 {
-    // Primero intenta cargar los datos del theme activo, si no existe carga los defaults
     $theme = Cms_Theme::first() ?? Cms_variable::first();
 
     if (!$theme) {
         abort(404, 'Tema no configurado');
     }
 
-    $css = "";
-
-    // ======================
-    // DEFINIR VARIABLES EN :root
-    // ======================
-    $css .= ":root {\n";
+    $css = ":root {\n";
     for ($i = 1; $i <= 4; $i++) {
-        $colorValue = $theme->{'color_'.$i} ?? null;
-        if ($colorValue) {
-            $css .= "    --color-{$i}: {$colorValue};\n";
-        }
+        $colorValue = $theme->{'color_'.$i} ?? '#000';
+        $css .= "    --color-{$i}: {$colorValue};\n";
     }
     for ($i = 1; $i <= 5; $i++) {
         $sizeValue = $theme->{'size_h'.$i} ?? 16;
@@ -984,9 +1014,7 @@ public function generateThemeCss()
     }
     $css .= "}\n\n";
 
-    // ======================
-    // CLASES DE COLORES
-    // ======================
+    // Colores
     for ($i = 1; $i <= 4; $i++) {
         $colorClass = $theme->{'var_color_'.$i} ?? null;
         if ($colorClass) {
@@ -994,28 +1022,30 @@ public function generateThemeCss()
         }
     }
 
-    $css .= "\n";
-
-    // ======================
-    // TIPOGRAFÍAS Y TAMAÑOS
-    // ======================
+    // Tipografías
     for ($i = 1; $i <= 5; $i++) {
         $fontClass = $theme->{'var_font_h'.$i} ?? 'h'.$i;
-
         $css .= "{$fontClass} {\n";
         $css .= "    font-family: var(--font-h{$i}) !important;\n";
         $css .= "    font-size: var(--size-h{$i}) !important;\n";
         $css .= "}\n";
     }
 
-    // ======================
-    // GUARDAR EN /public/theme.css
-    // ======================
     File::put(public_path('theme.css'), $css);
 
-    return back()->with('success', 'Archivo theme.css generado en /public');
+    return back()->with('success', 'Archivo theme.css actualizado correctamente ✅');
 }
 
+public function updateTheme(Request $request)
+{
+    $variables = Cms_variable::first();
+    $variables->update($request->all());
+
+    // Llamar al generador
+    $this->generateThemeCss();
+
+    return back()->with('success', 'Tema y CSS actualizados ✅');
+}
 
 private function extractComponentHtml($component)
 {
