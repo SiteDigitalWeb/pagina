@@ -915,14 +915,14 @@ public function themeCss()
     for ($i = 1; $i <= 4; $i++) {
         $colorValue = $theme->{'color_'.$i} ?? null;
         if ($colorValue) {
-            $css .= "    --color-{$i}: {$colorValue} !important;\n";
+            $css .= "    --color-{$i}: {$colorValue};\n"; // ❌ sin !important
         }
     }
     for ($i = 1; $i <= 5; $i++) {
         $sizeValue = $theme->{'size_h'.$i} ?? 16;
         $fontValue = $theme->{'font_h'.$i} ?? 'Roboto';
-        $css .= "    --font-h{$i}: '{$fontValue}', sans-serif !important;\n";
-        $css .= "    --size-h{$i}: {$sizeValue}px !important;\n";
+        $css .= "    --font-h{$i}: '{$fontValue}', sans-serif;\n"; // ❌ sin !important
+        $css .= "    --size-h{$i}: {$sizeValue}px;\n"; // ❌ sin !important
     }
     $css .= "}\n\n";
 
@@ -931,9 +931,7 @@ public function themeCss()
     // ======================
     for ($i = 1; $i <= 4; $i++) {
         $colorClass = $theme->{'var_color_'.$i} ?? null;
-        $colorValue = $theme->{'color_'.$i} ?? null;
-
-        if ($colorClass && $colorValue) {
+        if ($colorClass) {
             $css .= ".{$colorClass} { background: var(--color-{$i}) !important; }\n";
         }
     }
@@ -947,13 +945,14 @@ public function themeCss()
         $fontClass = $theme->{'var_font_h'.$i} ?? 'h'.$i;
 
         $css .= "{$fontClass} {\n";
-        $css .= "    font-family: var(--font-h{$i});\n";
-        $css .= "    font-size: var(--size-h{$i});\n";
+        $css .= "    font-family: var(--font-h{$i}) !important;\n";
+        $css .= "    font-size: var(--size-h{$i}) !important;\n";
         $css .= "}\n";
     }
 
     return response($css, 200)->header('Content-Type', 'text/css');
 }
+
 
 
 
