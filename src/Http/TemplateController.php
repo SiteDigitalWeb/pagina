@@ -1047,6 +1047,48 @@ public function updateTheme(Request $request)
     return back()->with('success', 'Tema y CSS actualizados ✅');
 }
 
+
+public function actualizarTemplate(Request $request)
+{
+    try {
+        $templateId = $request->input('template');
+         $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+           // Si estamos en tenant, simplemente usamos la base del tenant
+        if ($website) {
+        $registro = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first(); // Aquí no hay website_id
+        } else {
+        // En la base central, también usamos sin filtro
+        $registro = Cms_Template::first(); // O con filtro si tú creaste website_id
+        }
+
+
+        if ($registro) {
+            $registro->update([
+                'template' => $templateId
+            ]);
+        } else {
+            $registro = $model::create([
+                'template' => $templateId
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Template actualizado correctamente',
+            'data' => $registro
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Error al actualizar template',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+
+
 private function extractComponentHtml($component)
 {
     if (isset($component['content'])) {
@@ -1184,6 +1226,11 @@ public function load($id)
 }
 
 
+public function creartemplate()
+{
+    return view('pagina::templates.create');
+}
+
 private function prepareComponentsForEditor($content)
 {
     if (is_array($content)) {
@@ -1241,6 +1288,93 @@ private function fixSubmitButtonValue(array $components): array
 
     return $components;
 }
+
+
+public function templatestore(Request $request)
+{
+    // Validación
+    $request->validate([
+        'template' => 'nullable|string|max:255',
+        'description' => 'nullable|string|max:255',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        'url' => 'nullable|url|max:255',
+    ]);
+
+    $imagePath = null;
+
+    if ($request->hasFile('image')) {
+        // Definir carpeta de destino en /public/grapichtemplate
+        $destinationPath = public_path('graptemplate');
+        
+        // Crear la carpeta si no existe
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0777, true);
+        }
+
+
+        // Nombre único para la imagen
+        $fileName = time() . '_' . $request->file('image')->getClientOriginalName();
+
+        // Mover el archivo
+        $request->file('image')->move($destinationPath, $fileName);
+
+        // Guardar la ruta relativa (para usar en asset())
+        $imagePath = '/graptemplate/' . $fileName;
+    }
+
+    // Crear registro en BD
+    $template = Cms_Template::create([
+        'template' => $request->template,
+        'description' => $request->description,
+        'image' => $imagePath,
+        'url' => $request->url,
+    ]);
+
+    return redirect()->route('sd.templates')
+                     ->with('success', 'Template creado correctamente.');
+}
+
+public function edit($id)
+{
+
+    $template = Cms_Template::findOrFail($id);
+    return view('pagina::templates.edit', compact('template'));
+}
+
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'template' => 'nullable|string|max:255',
+        'description' => 'nullable|string|max:255',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        'url' => 'nullable|url|max:255',
+    ]);
+
+    $template = Cms_Template::findOrFail($id);
+
+    // Si subió nueva imagen
+    if ($request->hasFile('image')) {
+        $destinationPath = public_path('graptemplate');
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0777, true);
+        }
+
+        $fileName = time() . '_' . $request->file('image')->getClientOriginalName();
+        $request->file('image')->move($destinationPath, $fileName);
+
+        $template->image = '/graptemplate/' . $fileName;
+    }
+
+    // Actualizar otros campos
+    $template->template = $request->template;
+    $template->description = $request->description;
+    $template->url = $request->url;
+    $template->save();
+
+    return redirect()->route('sd.templates')->with('success', 'Template actualizado correctamente.');
+}
+
+
 
 private function prepareStylesForEditor($styles)
 {

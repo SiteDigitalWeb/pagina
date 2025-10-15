@@ -16,6 +16,7 @@ use Hyn\Tenancy\Repositories\WebsiteRepository;
 use DB;
 use Illuminate\Http\Request;
 use Intervention\Image\ImageManagerStatic;
+use Sitedigitalweb\Pagina\Cms_Template;
 use File;
 use Image;
 use Storage;
@@ -100,28 +101,23 @@ class GrapejsController extends Controller
       
     }
 
- public function vistatemplates(){
-  if(!$this->tenantName){
-   $templates = GrapeTemp::all();
-   $select = \DigitalsiteSaaS\Pagina\Tenant\Grapeselect::join('grape_template','grape_select.template','=','grape_template.id')
-    ->where('grape_select.id', 1)
-    ->get();
-   }else{
-   
-   $select = \DigitalsiteSaaS\Pagina\Tenant\Grapeselect::where('grape_select.id', 1)->get();
-   }
+   public function vistatemplates()
+    {
+     if (!$this->tenantName) {
+     $model = Cms_Template::class;
+     $modela = Cms_Template::class;
+     } else {
+     $model = Cms_Template::class;
+     $modela = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
+     }
+     // Paginación de 9 en 9
+     $alltemplates = $model::paginate(9);
 
-   foreach($select as $select){
-   $identificador = $select->template;
-   }
-   
-   $templates = GrapeTemp::where('id', '=', $identificador)->get();
-   $alltemplates = GrapeTemp::all();
+     // Obtener el template actualmente seleccionado
+     $selected = $modela::first()?->template;
 
-
-   return View('pagina::grapejs.templates')->with('templates', $templates)->with('select', $select)->with('alltemplates', $alltemplates);
-   }
-
+     return view('pagina::grapejs.templates', compact('alltemplates', 'selected'));
+    }
 
     public function vercomponentes($id){
      if(!$this->tenantName){

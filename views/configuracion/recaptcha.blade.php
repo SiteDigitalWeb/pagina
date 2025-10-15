@@ -64,31 +64,30 @@
                             
                                     <!-- Basic Form Elements Content -->
                                    
-                                      {{ Form::open(array('files' => true,'method' => 'POST','class' => 'form-horizontal','id' => 'defaultForm', 'url' => array('gestion/contenidos/actualizarrecaptcha'))) }}
-                                         @foreach($datos as $datos)
-                                        <div class="form-group">
-                                            <label class="col-md-3 control-label" for="example-text-input">Public key</label>
-                                            <div class="col-md-9">
-                                                 {{Form::text('publickey', $datos->public_key, array('class' => 'form-control', 'placeholder'=>'Ingrese correo'))}}
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-md-3 control-label" for="example-email-input">Private key</label>
-                                            <div class="col-md-9">
-                                                 {{Form::text('privatekey', $datos->private_key, array('class' => 'form-control', 'placeholder'=>'Ingrese sujeto'))}}
-                                            </div>
-                                        </div>
-                              
+                                     {{ Form::open(['files' => true,'method' => 'POST','class' => 'form-horizontal','id' => 'defaultForm', 'url' => ['/sd/update-recaptcha']]) }}
 
-                                        <div class="form-group form-actions">
-                                            <div class="col-md-9 col-md-offset-3">
-                                                <button type="submit" class="btn btn-sm btn-primary"><i class="fa fa-angle-right"></i> Editar</button>
-                                                <button type="reset" class="btn btn-sm btn-warning"><i class="fa fa-repeat"></i> Cancelar</button>
-                                            </div>
-                                        </div>
-                                        @endforeach
-                                      {{ Form::close() }} 
-                                   
+<div class="form-group">
+    <label class="col-md-3 control-label">Public key</label>
+    <div class="col-md-9">
+         {{ Form::text('publickey', $dato->site_key, ['class' => 'form-control', 'placeholder' => 'Ingrese public_key']) }}
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="col-md-3 control-label">Private key</label>
+    <div class="col-md-9">
+         {{ Form::text('privatekey', $dato->secret_key, ['class' => 'form-control', 'placeholder' => 'Ingrese private_key']) }}
+    </div>
+</div>
+
+<div class="form-group form-actions">
+    <div class="col-md-9 col-md-offset-3">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="fa fa-angle-right"></i> Editar</button>
+        <button type="reset" class="btn btn-sm btn-warning"><i class="fa fa-repeat"></i> Cancelar</button>
+    </div>
+</div>
+
+{{ Form::close() }}
 
                                  
                                 </div>

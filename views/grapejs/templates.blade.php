@@ -32,7 +32,31 @@
       </li>
      </ul>
     </div>
+<style>
+    .template-card {
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
 
+.template-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.template-card img {
+  height: 200px;
+  object-fit: cover;
+}
+
+.selected-template {
+    border: 3px solid #007bff; /* azul bootstrap */
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+}
+
+</style>
 
  <div class="container">
   <?php $status=Session::get('status'); ?>
@@ -59,122 +83,102 @@
 
  </div>
 
+<div class="container my-4">
+  @foreach($alltemplates->chunk(4) as $templateRow)
+    <div class="row">
+      @foreach($templateRow as $template)
+        <div class="col-md-3 col-sm-6 mb-4" style="padding: 10px;">
+          <div class="card h-100 template-card {{ $selected == $template->template ? 'selected-template' : '' }}">
+            
+            <!-- Imagen -->
+            <img src="{{ $template->preview ?? $template->image }}" 
+     alt="Preview {{ $template->template }}" 
+     class="card-img-top">
 
+            <!-- Cuerpo -->
+            <div class="card-body d-flex flex-column justify-content-between">
+              <h5 class="card-title text-center mb-3">{{ $template->template }}</h5>
 
+              <div class="d-flex justify-content-between">
+                <a 
+                        href="/sd/templates/{{ $template->id }}/edit"
+                        class="btn btn-success btn-sm w-100  btn-block"
+                     >
+                  <i class="fa fa-check"></i> Editar
+                </a>
+                <button type="button"
+                        class="btn btn-primary btn-sm w-100 btn-select-template btn-block"
+                        data-id="{{ $template->template }}">
+                  <i class="fa fa-check"></i> Seleccionar
+                </button>
+                <a 
+                        href="{{ $template->url }}"
+                        class="btn btn-info btn-sm w-100  btn-block"
+                     >
+                  <i class="fa fa-check"></i> Ver template
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      @endforeach
+    </div>
+  @endforeach
 
-
-
-<div class="container">
-  <div class="row">
-                            <div class="col-md-12">
-                                <!-- Basic Form Elements Block -->
-                                <div class="block">
-                                    <!-- Basic Form Elements Title -->
-                                    <div class="block-title">
-                                        <div class="block-options pull-right">
-                                            
-                                        </div>
-                                        <h2><strong>Template</strong> Seleccionado</h2>
-                                    </div>
-                                    <!-- END Form Elements Title -->
-                
-                                   
-
-                                    <!-- Basic Form Elements Content -->
-                                     
-                                    
-                                     {{ Form::open(array('method' => 'POST','class' => 'form-horizontal','id' => 'defaultForm1', 'url' => array('gestion//actualizar/template'))) }}
-
-                                       <label for="cars">Seleccionar Template</label>
-                                        <select name="template" id="template" class="form-control">
-                                        @foreach($alltemplates as $alltemplates)
-                                        <option value="{{$alltemplates->id}}" selected>{{$alltemplates->plantilla}}</option>
-                                        @endforeach
-                                        @foreach($templates as $templatesa)
-                                        <option value="{{$templatesa->id}}" selected>{{$templatesa->plantilla}}</option>
-                                        @endforeach
-                                        </select>
-    
-                                      
-                                       
-
-                                        <div class="form-group form-actions">
-                                            <div class="col-md-9 col-md-offset-1">
-                                                <br>
-                                                <button type="submit" class="btn btn-sm btn-primary"><i class="fa fa-angle-right"></i> Seleccionar</button>
-                                                <button type="reset" class="btn btn-sm btn-warning"><i class="fa fa-repeat"></i> Cancelar</button>
-                                            </div>
-                                        </div>
-                                    {{ Form::close() }}
-                      
-                                </div>
-                                <!-- END Basic Form Elements Block -->
-                            </div>
-                          </div>
-                          
-</div>
- <div class="container">
-   <a href="<?=URL::to('/gestor/crear-template');?>"><button type="button" class="btn btn-primary pull-right"><span class="glyphicon glyphicon-star"></span> Crear Template</button></a>
+  <!-- Paginador -->
+  <div class="d-flex justify-content-center mt-4">
+    {{ $alltemplates->links() }}
   </div>
-
-<br>
-
-<div class="container">
-  
- <div class="block full">
-                            <div class="block-title">
-                                <h2><strong>Templates</strong> registrados</h2>
-                            </div>
-
-                            <div class="table-responsive">
-                                <table id="example-datatable" class="table table-vcenter table-condensed table-bordered">
-                                    <thead>
-                                    <tr>
-                                    <th class="text-center">ID</th>
-                                    <th class="text-center">Template</th>
-                                    <th>Descripción</th>
-                                    <th>Autor</th>
-                                    <th>Creación</th>
-                                    <th>Acciones</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                              
-                                        @foreach($templates as $templates)
-                                        <tr>
-                                            <td>{{$templates->id}}</td>
-                                            <td class="text-center">{{$templates->plantilla}}</td>
-                                            <td class="text-center">{{$templates->descripcion}}</td>
-                                            
-                                            <td></td>
-                                            <td> </td>
-                                            <td class="text-center">
-                                                <div class="btn-group">
-
-                                                    <a href="<?=URL::to('gestion/ver-componentes');?>/{{$templates->id}}"><span  id="tip" data-toggle="tooltip" data-placement="left" title="Ver Componentes" class="btn btn-warning"><i class="gi gi-sort sidebar-nav-icon"></i></span></a>
-                                           
-                                           <a href="<?=URL::to('gestion/editar-templategrape');?>/{{$templates->id}}"><span  id="tip" data-toggle="tooltip" data-placement="top" title="Editar template" class="btn btn-primary"><i class="fa fa-pencil-square-o sidebar-nav-icon"></i></span></a>
-                                           
-                                            
-                                         
-          <a href="<?=URL::to('gestor/templates/eliminartemplate/');?>/{{$templates->id}}" onclick="return confirm('¿Está seguro que desea eliminar el registro?')"><button ="button" class="btn btn-danger" data-toggle="tooltip" data-placement="right" title="Eliminar template"><i class="hi hi-trash sidebar-nav-icon"></i></button></a>
-
-
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                       
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <!-- END Datatables Content -->
-
-
-
-
 </div>
+
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const buttons = document.querySelectorAll(".btn-select-template");
+
+    buttons.forEach(button => {
+        button.addEventListener("click", function (e) {
+            e.preventDefault(); // 👈 evita envío normal
+
+            let templateId = this.getAttribute("data-id");
+
+            fetch("{{ url('sd/update-template') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    template: templateId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("HTTP error " + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Respuesta del servidor:", data);
+
+                if (data.status === "success") {
+                    // Quitar resaltado de todas las tarjetas
+                    document.querySelectorAll(".template-card").forEach(card => {
+                        card.classList.remove("selected-template");
+                    });
+
+                    // Resaltar la tarjeta seleccionada
+                    this.closest(".template-card").classList.add("selected-template");
+                } else {
+                    alert("Hubo un problema: " + data.message);
+                }
+            })
+            .catch(error => console.error("Error de red o JS:", error));
+        });
+    });
+});
+</script>
 
 
 

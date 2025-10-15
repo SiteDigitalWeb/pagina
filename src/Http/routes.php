@@ -2,6 +2,7 @@
 
 Route::group(['middleware' => ['auth','administrador']], function (){
 Route::prefix('sd')->group(function () {
+Route::resource('country', \Sitedigitalweb\Pagina\Http\CountyController::class)->names('ge.embudo');
 Route::resource('pages', 'Sitedigitalweb\Pagina\Http\PaginaController');
 Route::get('create-page', 'Sitedigitalweb\Pagina\Http\PaginaController@show');
 Route::get('create-subpage/{id}', 'Sitedigitalweb\Pagina\Http\PaginaController@show');
@@ -35,6 +36,22 @@ Route::get('popup', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'show
  Route::post('popup', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'theme'])->name('popup.store');
  Route::get('popup/data', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'getThemeData'])->name('popup.data');
 
+ Route::get('recaptcha', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@recaptcha');
+Route::post('update-recaptcha', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@updaterecaptcha');
+
+
+Route::post('update-template', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'actualizarTemplate']);
+Route::get('create-templates', 'Sitedigitalweb\Pagina\Http\TemplateController@creartemplate');
+
+Route::post('save-template', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'templatestore'])->name('templates.stores');
+
+Route::get('/templates/{id}/edit', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'edit'])->name('templates.edit');
+Route::put('/templates/{id}', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'update'])->name('templates.update');
+Route::get('templates', [Sitedigitalweb\Pagina\Http\GrapejsController::class, 'vistatemplates'])->name('sd.templates');
+Route::resource('country', \Sitedigitalweb\Pagina\Http\CountryController::class)->names('sd.country');
+
+Route::resource('city', \Sitedigitalweb\Pagina\Http\CityController::class)->names('sd.city');
+
 });
 });
 
@@ -53,7 +70,6 @@ Route::prefix('images')->group(function () {
     // Ruta para eliminar una imagen
     Route::delete('/delete', ['Sitedigitalweb\Pagina\Http\ImageController', 'destroy'])->name('images.destroy');
 });
-
 
 
 Route::group(['middleware' => ['auth','administrador']], function (){
@@ -85,7 +101,7 @@ Route::post('gestion/contenidos/actualizarrecaptcha', 'DigitalsiteSaaS\Pagina\Ht
 Route::post('gestion/contenidos/actualizarventa', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@actualizarventa');
 Route::post('gestion/contenidos/seoupdate', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@updateseo');
 Route::post('gestion/contenidos/redes-sociales', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@updatered');
-Route::get('gestion/recaptcha', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@recaptcha');
+
 Route::get('gestion/redes-sociales', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@verredes'); 
 
 Route::get('gestion/seo', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@seo');

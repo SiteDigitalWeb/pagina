@@ -114,11 +114,9 @@
                                             <td> {{ date('d M, Y', strtotime($templates->created_at)) }}</td>
                                             <td class="text-center">
                                                 <div class="btn-group">
-                                           @if(DB::table('colors')->where('template', $templates->slug)->exists())
-                                           <a href="<?=URL::to('gestion/editar-template');?>/{{$templates->slug}}"><span  id="tip" data-toggle="tooltip" data-placement="left" title="Editar template" class="btn btn-primary"><i class="fa fa-pencil-square-o sidebar-nav-icon"></i></span></a>
-                                           @else
+                                       
                                             <a href="<?=URL::to('gestion/crear-template');?>/{{$templates->slug}}"><span  id="tip" data-toggle="tooltip" data-placement="left" title="Editar template" class="btn btn-primary"><i class="fa fa-pencil-square-o sidebar-nav-icon"></i></span></a>
-                                            @endif    
+                                   
           <a href="<?=URL::to('gestor/templates/eliminartemplate/');?>/{{$templates->nombre}}" onclick="return confirm('¿Está seguro que desea eliminar el registro?')"><button ="button" class="btn btn-danger" data-toggle="tooltip" data-placement="right" title="Eliminar template"><i class="hi hi-trash sidebar-nav-icon"></i></button></a>
 
 

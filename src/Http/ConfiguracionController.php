@@ -19,7 +19,8 @@ use Sitedigitalweb\Pagina\Cms_paiscon;
 use DigitalsiteSaaS\Pagina\Departamentocon;
 use DigitalsiteSaaS\Pagina\Pais;
 use DigitalsiteSaaS\Pagina\Municipio;
-use DigitalsiteSaaS\Pagina\Recaptcha;
+use Sitedigitalweb\Pagina\Cms_recaptcha;
+use Sitedigitalweb\Pagina\Cms_Template;
 use DigitalsiteSaaS\Pagina\Whatsapp;
 use App\User;
 use Excel;
@@ -47,12 +48,14 @@ class ConfiguracionController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    
     public function index(){
-     $tenantName = $this->tenantName;
-     $templates = DB::table('templa')
-     ->get();
-     return view('pagina::configuracion.ver-templates')->with('templates', $templates)->with('tenantName', $tenantName);
-    }
+    $templates = Cms_template::all();
+    return view('pagina::configuracion.ver-templates', [
+        'templates'  => $templates,
+        'tenantName' => $this->tenantName,
+     ]);
+    }   
 
 
      public function publico(){
@@ -359,14 +362,33 @@ class ConfiguracionController extends Controller
     return View('pagina::configuracion.correo')->with('datos', $datos);
     }
 
-    public function recaptcha(){
-    if(!$this->tenantName){
-    $datos = Recaptcha::where('id','=',1)->get();
-    }else{
-    $datos = \DigitalsiteSaaS\Pagina\Tenant\Recaptcha::where('id','=',1)->get();  
+    public function recaptcha()
+    {
+    $model = $this->tenantName 
+        ? \DigitalsiteSaaS\Pagina\Tenant\Cms_recaptcha::class 
+        : Cms_recaptcha::class;
+
+    $dato = $model::find(1); // más directo y retorna un solo registro
+
+    return view('pagina::configuracion.recaptcha', compact('dato'));
+}
+
+    public function updaterecaptcha(Request $request)
+    {
+    $model = $this->tenantName 
+        ? \DigitalsiteSaaS\Pagina\Tenant\Cms_recaptcha::class 
+        : Cms_recaptcha::class;
+
+    $contenido = $model::findOrFail(1);
+
+    $contenido->update([
+    'site_key'   => $request->input('publickey'),
+    'secret_key' => $request->input('privatekey'),
+]);
+
+    return redirect('sd/recaptcha')->with('status', 'ok_update');
     }
-    return View('pagina::configuracion.recaptcha')->with('datos', $datos);
-    }
+
 
     public function logohead(){
     if(!$this->tenantName){ 
@@ -421,18 +443,7 @@ class ConfiguracionController extends Controller
     }
 
 
-    public function actualizarrecaptcha(){
-     $input = Input::all();
-     if(!$this->tenantName){ 
-     $contenido = Recaptcha::find(1);
-     }else{
-     $contenido = \DigitalsiteSaaS\Pagina\Tenant\Recaptcha::find(1);  
-     }
-     $contenido->public_key = Input::get('publickey');
-     $contenido->private_key = Input::get('privatekey');
-     $contenido->save();
-     return Redirect('gestion/recaptcha')->with('status', 'ok_update');
-    }
+   
 
     public function actualizarventa(){
      $input = Input::all();

@@ -9,4 +9,13 @@ class Cms_Template extends Model
 {
     use HasFactory;
     protected $table = 'cms_templates';
+     protected $fillable = [
+        'id',
+        'template',   // 👈 agrega este campo
+        'preview',
+        'image',
+        'url',
+        'description',
+        // otros campos que existan en tu tabla
+    ];
 }
