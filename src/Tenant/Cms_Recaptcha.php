@@ -6,6 +6,7 @@ use Hyn\Tenancy\Traits\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+
 class Cms_Recaptcha extends Model
 {
     use UsesTenantConnection;
@@ -16,3 +17,7 @@ class Cms_Recaptcha extends Model
         'secret_key',
     ];
 }
+
+
+
+
