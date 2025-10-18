@@ -365,7 +365,7 @@ class ConfiguracionController extends Controller
     public function recaptcha()
     {
     $model = $this->tenantName 
-        ? \DigitalsiteSaaS\Pagina\Tenant\Cms_recaptcha::class 
+        ? \Sitedigitalweb\Pagina\Tenant\Cms_recaptcha::class 
         : Cms_recaptcha::class;
 
     $dato = $model::find(1); // más directo y retorna un solo registro
@@ -376,7 +376,7 @@ class ConfiguracionController extends Controller
     public function updaterecaptcha(Request $request)
     {
     $model = $this->tenantName 
-        ? \DigitalsiteSaaS\Pagina\Tenant\Cms_recaptcha::class 
+        ? \Sitedigitalweb\Pagina\Tenant\Cms_recaptcha::class 
         : Cms_recaptcha::class;
 
     $contenido = $model::findOrFail(1);
