@@ -443,10 +443,16 @@ public function getComponents()
       return response()->json(['success' => true]);
      }
 
-    public function funel()
-   {
-    $funnels = \DB::table('cms_funel')->select('id', 'funel')->get(); 
-    return response()->json($funnels);
+     
+
+     public function funel(){
+    
+     if(!$this->tenantName){
+     $funnels = \Sitedigitalweb\Gestion\Cms_funel::select('id', 'funel')->get();
+     }else{
+     $funnels =  \Sitedigitalweb\Gestion\Tenant\Cms_funel::select('id', 'funel')->get();
+     }
+     return response()->json($funnels);
     }
 
 }

@@ -1036,6 +1036,7 @@ $(document).ready(function () {
 
 
 
+
 @include($web->template . '.assets-web.assets-grapejs')
 
 
