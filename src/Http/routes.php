@@ -1,7 +1,19 @@
 <?php
 
 Route::group(['middleware' => ['auth','administrador']], function (){
+
+
+
 Route::prefix('sd')->group(function () {
+
+ Route::get('mail', [Sitedigitalweb\Pagina\Http\TenantMailController::class, 'edit'])->name('tenant.mail.edit');
+    Route::post('mail', [Sitedigitalweb\Pagina\Http\TenantMailController::class, 'update'])->name('tenant.mail.update');
+
+    // Enviar correo de prueba
+    Route::get('mail/test', [Sitedigitalweb\Pagina\Http\TenantMailController::class, 'sendTestMail'])->name('tenant.mail.test');
+
+
+
 Route::resource('country', \Sitedigitalweb\Pagina\Http\CountyController::class)->names('ge.embudo');
 Route::resource('pages', 'Sitedigitalweb\Pagina\Http\PaginaController');
 Route::get('create-page', 'Sitedigitalweb\Pagina\Http\PaginaController@show');
