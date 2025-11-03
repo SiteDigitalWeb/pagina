@@ -1,12 +1,14 @@
 <?php
 
-namespace Sitedigitalweb\Pagina;
+namespace Sitedigitalweb\Pagina\Tenant;
 
+use Hyn\Tenancy\Traits\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Cms_smtp_configs extends Model
 {
+    use UsesTenantConnection;
     protected $fillable = [
         'mail_driver',
         'mail_host',

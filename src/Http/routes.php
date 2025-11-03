@@ -2,17 +2,14 @@
 
 Route::group(['middleware' => ['auth','administrador']], function (){
 
-
+Route::post('/smtp/send-test', [SmtpConfigController::class, 'sendTestMail'])->name('smtp.send-test');
 
 Route::prefix('sd')->group(function () {
 
- Route::get('mail', [Sitedigitalweb\Pagina\Http\TenantMailController::class, 'edit'])->name('tenant.mail.edit');
-    Route::post('mail', [Sitedigitalweb\Pagina\Http\TenantMailController::class, 'update'])->name('tenant.mail.update');
 
-    // Enviar correo de prueba
-    Route::get('mail/test', [Sitedigitalweb\Pagina\Http\TenantMailController::class, 'sendTestMail'])->name('tenant.mail.test');
-
-
+Route::get('/smtp', [Sitedigitalweb\Pagina\Http\SmtpConfigController::class, 'index'])->name('smtp.index');
+Route::post('/smtp', [Sitedigitalweb\Pagina\Http\SmtpConfigController::class, 'store'])->name('smtp.store');
+Route::post('/smtp/test', [Sitedigitalweb\Pagina\Http\SmtpConfigController::class, 'sendTestMail'])->name('smtp.test');
 
 Route::resource('country', \Sitedigitalweb\Pagina\Http\CountyController::class)->names('ge.embudo');
 Route::resource('pages', 'Sitedigitalweb\Pagina\Http\PaginaController');

@@ -448,6 +448,16 @@ private function renderComponent($component)
     if (!empty($funelId)) {
         $innerHtml = '<input type="hidden" name="funel_id" value="' . htmlspecialchars($funelId) . '">' . $innerHtml;
     }
+
+     $emailDestino = $component['email_destino'] ?? ($attributes['email_destino'] ?? null);
+    if (!empty($emailDestino)) {
+        $innerHtml = '<input type="hidden" name="email_destino" value="' . htmlspecialchars($emailDestino) . '">' . $innerHtml;
+    }
+
+     $sujeto = $component['sujeto'] ?? ($attributes['sujeto'] ?? null);
+    if (!empty($sujeto)) {
+        $innerHtml = '<input type="hidden" name="sujeto" value="' . htmlspecialchars($sujeto) . '">' . $innerHtml;
+    }
 }
 
     
