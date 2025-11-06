@@ -207,8 +207,8 @@ public function submitForm(Request $request)
             'campo20' => 'nullable|string|max:255',
 
             // NUEVOS CAMPOS PARA EMAIL (AJUSTADOS)
-            'email_destino' => 'nullable|email|max:100',  // Cambiado de 'to'
-            'sujeto'        => 'nullable|string|max:200', // Cambiado de 'subject'
+            'email_destino' => 'nullable|email|max:100',
+            'sujeto'        => 'nullable|string|max:200',
         ]);
 
         // 4. Valores por defecto si vienen null
@@ -234,11 +234,11 @@ public function submitForm(Request $request)
             'sujeto' => $validated['sujeto'] ?? 'no-sujeto'
         ]);
 
-        // 6. Configuración y verificación SMTP - SOLO ENVIAR SI HAY DESTINATARIO
+        // 6. Configuración y verificación SMTP - SOLO ENVIAR SI HAY EMAIL_DESTINO
         $mailSent = false;
         $mailError = null;
         
-        // USAR email_destino EN LUGAR DE to
+        // VERIFICAR SI HAY EMAIL_DESTINO DEFINIDO
         $shouldSendEmail = !empty($validated['email_destino']);
 
         \Log::info('Verificación de envío de correo', [
@@ -275,33 +275,29 @@ public function submitForm(Request $request)
                     'mail.from.name' => $mailFromName,
                 ]);
 
-                // 7. Enviar correo con verificación - SOLO SI HAY DESTINATARIO
+                // 7. Enviar correo SOLO al email_destino (sin CC ni replyTo)
                 try {
-                    \Log::info('Intentando enviar correo...');
+                    \Log::info('Intentando enviar correo SOLO a email_destino...');
                     
-                    // USAR LOS CAMPOS DEL FORMULARIO CON NUEVOS NOMBRES
+                    // USAR EXCLUSIVAMENTE email_destino
                     $emailDestino = $validated['email_destino'];
                     $sujeto = $validated['sujeto'] ?? '📩 Nuevo mensaje recibido desde el sitio web';
                     
-                    \Log::info('Configuración de correo final:', [
+                    \Log::info('Configuración de correo final (SOLO email_destino):', [
                         'email_destino' => $emailDestino,
                         'sujeto' => $sujeto,
                         'from_email' => $validated['email'] ?? 'no-email',
                         'has_custom_sujeto' => !empty($validated['sujeto'])
                     ]);
                     
+                    // ENVÍO EXCLUSIVO AL EMAIL_DESTINO
                     Mail::send('emails.contacto', ['data' => $validated], function ($message) use ($smtpConfig, $validated, $emailDestino, $sujeto) {
+                        // ENVIAR SOLO AL EMAIL_DESTINO - SIN CC, SIN REPLYTO
                         $message->to($emailDestino)->subject($sujeto);
 
-                        // Copia al remitente si dejó su correo
-                        if (!empty($validated['email'])) {
-                            $message->cc($validated['email']);
-                        }
-
-                        // Responder a si hay un email del usuario
-                        if (!empty($validated['email'])) {
-                            $message->replyTo($validated['email']);
-                        }
+                        // REMOVER CUALQUIER CC O REPLYTO
+                        // NO incluir CC al remitente del formulario
+                        // NO configurar replyTo
 
                         $message->from(
                             $smtpConfig->mail_from_address ?? 'no-reply@sitekonecta.com',
@@ -310,15 +306,16 @@ public function submitForm(Request $request)
                     });
                     
                     $mailSent = true;
-                    \Log::info('Correo enviado exitosamente', [
+                    \Log::info('Correo enviado EXCLUSIVAMENTE a email_destino', [
                         'email_destino' => $emailDestino,
                         'sujeto' => $sujeto,
-                        'from' => $smtpConfig->mail_from_address
+                        'from' => $smtpConfig->mail_from_address,
+                        'nota' => 'NO se envió CC ni replyTo al usuario del formulario'
                     ]);
                     
                 } catch (\Exception $e) {
                     $mailError = $e->getMessage();
-                    \Log::error('Error al enviar correo: ' . $mailError, [
+                    \Log::error('Error al enviar correo a email_destino: ' . $mailError, [
                         'email_destino' => $emailDestino,
                         'sujeto' => $sujeto,
                         'config' => [
@@ -353,11 +350,12 @@ public function submitForm(Request $request)
         $successMessage = '✅ ¡Formulario enviado correctamente!';
         
         if ($mailSent) {
-            $successMessage .= ' y correo notificado';
+            $successMessage .= ' y correo notificado al destinatario';
             
-            \Log::info('Proceso completo: Formulario guardado y correo enviado', [
+            \Log::info('Proceso completo: Formulario guardado y correo enviado SOLO a email_destino', [
                 'custom_email_used' => !empty($validated['email_destino']),
-                'custom_sujeto_used' => !empty($validated['sujeto'])
+                'custom_sujeto_used' => !empty($validated['sujeto']),
+                'nota' => 'NO se envió copia al usuario del formulario'
             ]);
         } else if (!$shouldSendEmail) {
             // No mostrar error si no se configuró el email de notificación
@@ -380,7 +378,7 @@ public function submitForm(Request $request)
             'file' => $e->getFile(),
             'line' => $e->getLine(),
             'trace' => $e->getTraceAsString(),
-            'request_data' => $request->except(['password', 'token']), // Excluir datos sensibles
+            'request_data' => $request->except(['password', 'token']),
             'email_destino_field' => $request->input('email_destino', 'not-provided'),
             'sujeto_field' => $request->input('sujeto', 'not-provided')
         ]);
@@ -392,13 +390,15 @@ public function submitForm(Request $request)
     }
 }
 
-// Método auxiliar para validar configuración SMTP (debes mantener este método)
+/**
+ * Validar configuración SMTP mínima requerida
+ */
 private function isValidSmtpConfig($smtpConfig)
 {
-    return !empty($smtpConfig->mail_host) && 
-           !empty($smtpConfig->mail_port) && 
-           !empty($smtpConfig->mail_username) && 
-           !empty($smtpConfig->mail_password) && 
+    return !empty($smtpConfig->mail_host) &&
+           !empty($smtpConfig->mail_port) &&
+           !empty($smtpConfig->mail_username) &&
+           !empty($smtpConfig->mail_password) &&
            !empty($smtpConfig->mail_from_address);
 }
 
