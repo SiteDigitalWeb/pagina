@@ -64,6 +64,18 @@ Route::resource('city', \Sitedigitalweb\Pagina\Http\CityController::class)->name
 });
 });
 
+// Ruta para servir el CSS del tenant actual
+Route::get('/tenant-styles.css', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'getTenantCss']);
+
+// Ruta para servir el CSS del sistema central
+Route::get('/central-styles.css', function() {
+    $cssPath = public_path('theme-central.css');
+    if (File::exists($cssPath)) {
+        return response(File::get($cssPath), 200)->header('Content-Type', 'text/css');
+    }
+    return response("/* CSS central no configurado */", 200)->header('Content-Type', 'text/css');
+});
+
 
 Route::get('/sd/themes.css', [Sitedigitalweb\Pagina\Http\TemplateController::class, 'themeCss'])->name('theme.css');
 

@@ -786,8 +786,17 @@ private function extractHtmlFromComponents($components)
 
 public function showForm()
 {
-    // Traer el único registro
-    $theme = Cms_Theme::first();
+
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    if ($website) {
+        // Si quieres asegurarte de obtener el theme específico del tenant
+        $theme = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::first();
+    } else {
+        // En sistema central, podrías querer filtrar por un campo específico
+        $theme = Cms_Theme::first();
+    }
+
     return view('pagina::pages.editor', compact('theme'));
 }
 
@@ -815,28 +824,79 @@ public function theme(Request $request)
     ]);
 
     try {
+        // Detectar si estamos en un tenant
+        $website = app(\Hyn\Tenancy\Environment::class)->website();
+        
+        if ($website) {
+            // Usar modelos del tenant
+            $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::class;
+            $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
+            $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
+            $tenantId = $website->id;
+            $tenantUuid = $website->uuid;
+        } else {
+            // Usar modelos del sistema central
+            $themeModel = Cms_Theme::class;
+            $variableModel = Cms_variable::class;
+            $templateModel = Cms_Template::class;
+            $tenantId = null;
+            $tenantUuid = 'central';
+        }
+
         // Si existe cms_theme actualiza
-        $theme = Cms_Theme::first();
+        $theme = $themeModel::first();
 
         if (!$theme) {
             // Si no hay cms_theme, crea uno nuevo con los datos de cms_variable
-            $variable = Cms_variable::first();
-            $theme = Cms_Theme::create(array_merge(
+            $variable = $variableModel::first();
+            $themeData = array_merge(
                 (array) $variable ?? [],
                 $validated
-            ));
+            );
+            
+            // Si el modelo tenant necesita website_id, agregarlo
+            if ($website && !isset($themeData['website_id'])) {
+                $themeData['website_id'] = $website->id;
+            }
+            
+            $theme = $themeModel::create($themeData);
         } else {
             $theme->update($validated);
         }
 
+        // Obtener el template desde la base de datos
+        $template = $templateModel::first();
+        $templateName = 'default';
+        
+        if ($template && !empty($template->template)) {
+            $templateName = $template->template;
+        }
+
+        // Limpiar el nombre del template
+        $templateName = preg_replace('/[^a-zA-Z0-9_-]/', '', $templateName);
+        if (empty($templateName)) {
+            $templateName = 'default';
+        }
+
         // ======================
-        // GENERAR / ACTUALIZAR theme.css
+        // GENERAR CSS PARA EL TENANT
         // ======================
-        $css = ":root {\n";
+        $css = "/* CSS para Tenant: {$tenantUuid} - Template: {$templateName} */\n";
+        $css .= ":root {\n";
+        
+        // Colores específicos del tenant
         for ($i = 1; $i <= 4; $i++) {
             $color = $theme->{'color_'.$i} ?? '#000000';
             $css .= "    --color-{$i}: {$color};\n";
         }
+        
+        // ✅ AGREGAR COLOR PRIMARY Y SECONDARY
+        $colorPrimary = $theme->color_1 ?? '#000000';
+        $colorSecondary = $theme->color_2 ?? '#000000';
+        $css .= "    --color-primary: {$colorPrimary};\n";
+        $css .= "    --color-secondary: {$colorSecondary};\n";
+        
+        // Fuentes específicas del tenant
         for ($i = 1; $i <= 5; $i++) {
             $font = $theme->{'font_h'.$i} ?? 'Roboto';
             $size = $theme->{'size_h'.$i} ?? 16;
@@ -845,7 +905,7 @@ public function theme(Request $request)
         }
         $css .= "}\n\n";
 
-        // Clases de color
+        // Clases de color específicas del tenant
         for ($i = 1; $i <= 4; $i++) {
             $colorClass = $theme->{'var_color_'.$i} ?? null;
             if ($colorClass) {
@@ -853,7 +913,19 @@ public function theme(Request $request)
             }
         }
 
-        // Tipografías y tamaños
+        // ✅ AGREGAR CLASES PARA PRIMARY Y SECONDARY
+        $css .= ".color-primary { background: var(--color-primary) !important; }\n";
+        $css .= ".color-secondary { background: var(--color-secondary) !important; }\n";
+        $css .= ".text-primary { color: var(--color-primary) !important; }\n";
+        $css .= ".text-secondary { color: var(--color-secondary) !important; }\n";
+        $css .= ".border-primary { border-color: var(--color-primary) !important; }\n";
+        $css .= ".border-secondary { border-color: var(--color-secondary) !important; }\n";
+        $css .= ".bg-primary { background-color: var(--color-primary) !important; }\n";
+        $css .= ".bg-secondary { background-color: var(--color-secondary) !important; }\n";
+
+        $css .= "\n";
+
+        // Tipografías y tamaños específicos del tenant
         for ($i = 1; $i <= 5; $i++) {
             $fontClass = $theme->{'var_font_h'.$i} ?? 'h'.$i;
             $css .= "{$fontClass} {\n";
@@ -862,39 +934,118 @@ public function theme(Request $request)
             $css .= "}\n";
         }
 
-        // Guardar en public/theme.css
-        File::put(public_path('theme.css'), $css);
+        // ======================
+        // GUARDAR CSS POR TENANT
+        // ======================
+        if ($website) {
+            // Para TENANTS: guardar en public/tenants/{uuid}/theme.css
+            $cssDirectory = public_path("tenants/{$tenantUuid}");
+            $cssPath = "{$cssDirectory}/theme.css";
+            $cssUrl = url("tenants/{$tenantUuid}/theme.css");
+        } else {
+            // Para SISTEMA CENTRAL: guardar en public/central/theme.css
+            $cssDirectory = public_path('central');
+            $cssPath = "{$cssDirectory}/theme.css";
+            $cssUrl = url('central/theme.css');
+        }
+
+        // Asegurar que el directorio existe
+        if (!File::exists($cssDirectory)) {
+            File::makeDirectory($cssDirectory, 0755, true);
+        }
+
+        // Guardar el archivo CSS
+        File::put($cssPath, $css);
+
+        // También guardar en storage como backup
+        $storagePath = "tenants/{$tenantUuid}/theme.css";
+        Storage::disk('public')->put($storagePath, $css);
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Formulario enviado y theme.css generado ✅',
-            'data'    => $theme
+            'message' => 'Estilos del tenant guardados correctamente ✅',
+            'data'    => $theme,
+            'css_url' => $cssUrl,
+            'css_path' => $cssPath,
+            'tenant'   => $tenantUuid,
+            'template' => $templateName
         ], 200);
 
     } catch (\Exception $e) {
+        \Log::error('Error al guardar theme CSS para tenant: ' . $e->getMessage());
+        
         return response()->json([
             'status'  => 'error',
-            'message' => 'Hubo un problema al guardar el formulario',
+            'message' => 'Hubo un problema al guardar los estilos del tenant',
             'error'   => $e->getMessage()
         ], 500);
     }
 }
 
+public function getTenantCss()
+{
+    try {
+        $website = app(\Hyn\Tenancy\Environment::class)->website();
+        
+        if ($website) {
+            // Tenant: cargar CSS específico
+            $tenantUuid = $website->uuid;
+            $cssPath = public_path("tenants/{$tenantUuid}/theme.css");
+            
+            if (File::exists($cssPath)) {
+                $css = File::get($cssPath);
+            } else {
+                // Si no existe, usar CSS por defecto
+                $css = "/* CSS por defecto - Tenant: {$tenantUuid} */\n:root { --color-1: #000000; --color-2: #ffffff; }";
+            }
+        } else {
+            // Sistema central: cargar CSS central
+            $cssPath = public_path('theme-central.css');
+            
+            if (File::exists($cssPath)) {
+                $css = File::get($cssPath);
+            } else {
+                $css = "/* CSS del sistema central */\n:root { --color-1: #000000; --color-2: #ffffff; }";
+            }
+        }
 
+        return response($css, 200)
+            ->header('Content-Type', 'text/css')
+            ->header('X-Tenant', $website ? $website->uuid : 'central');
+
+    } catch (\Exception $e) {
+        // En caso de error, devolver CSS vacío
+        return response("/* Error cargando CSS: {$e->getMessage()} */", 200)
+            ->header('Content-Type', 'text/css');
+    }
+}
 
 public function getThemeData()
 {
 
-    $template = Cms_template::first(); // o con un campo is_active
-
-    // Trae primero el tema activo
-    $theme = Cms_Theme::first();
-
-    if (!$theme) {
-        // Si no hay theme, trae el primer registro de variables
-        $theme = Cms_variable::where('template_id', $template->id)->first();
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    
+    if ($website) {
+        $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_template::class;
+        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::class;
+        $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
+        
+        // Para tenant, puedes filtrar por website_id si es necesario
+        $template = $templateModel::first();
+        $theme = $themeModel::first();
+    } else {
+        $templateModel = Cms_template::class;
+        $themeModel = Cms_Theme::class;
+        $variableModel = Cms_variable::class;
+        
+        $template = $templateModel::first();
+        $theme = $themeModel::first();
     }
 
+    // El resto de la lógica permanece igual...
+    if (!$theme && $template) {
+        $theme = $variableModel::where('template_id', $template->id)->first();
+    }
 
     // Si tampoco hay variables, crear valores por defecto
     if (!$theme) {
@@ -949,14 +1100,29 @@ public function getThemeData()
 
 public function themeCss()
 {
-    // Primero intenta cargar los datos del theme activo, si no existe carga los defaults
-    $theme = Cms_Theme::first() ?? Cms_variable::first();
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    
+    if ($website) {
+        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::class;
+        $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
+        
+        // Si los modelos tenant necesitan filtrar por website_id
+        $theme = $themeModel::where('website_id', $website->id)->first() 
+               ?? $variableModel::where('website_id', $website->id)->first();
+    } else {
+        $themeModel = Cms_Theme::class;
+        $variableModel = Cms_variable::class;
+        
+        $theme = $themeModel::first() ?? $variableModel::first();
+    }
+
     if (!$theme) {
         abort(404, 'Tema no configurado');
     }
 
+    // Resto del código para generar CSS permanece igual...
     $css = "";
-
+    
     // ======================
     // DEFINIR VARIABLES EN :root
     // ======================
@@ -964,14 +1130,14 @@ public function themeCss()
     for ($i = 1; $i <= 4; $i++) {
         $colorValue = $theme->{'color_'.$i} ?? null;
         if ($colorValue) {
-            $css .= "    --color-{$i}: {$colorValue};\n"; // ❌ sin !important
+            $css .= "    --color-{$i}: {$colorValue};\n";
         }
     }
     for ($i = 1; $i <= 5; $i++) {
         $sizeValue = $theme->{'size_h'.$i} ?? 16;
         $fontValue = $theme->{'font_h'.$i} ?? 'Roboto';
-        $css .= "    --font-h{$i}: '{$fontValue}', sans-serif;\n"; // ❌ sin !important
-        $css .= "    --size-h{$i}: {$sizeValue}px;\n"; // ❌ sin !important
+        $css .= "    --font-h{$i}: '{$fontValue}', sans-serif;\n";
+        $css .= "    --size-h{$i}: {$sizeValue}px;\n";
     }
     $css .= "}\n\n";
 
@@ -1002,20 +1168,56 @@ public function themeCss()
     return response($css, 200)->header('Content-Type', 'text/css');
 }
 
-
 public function generateThemeCss()
 {
-    $theme = Cms_Theme::first() ?? Cms_variable::first();
+    // Detectar si estamos en un tenant
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    
+    if ($website) {
+        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::class;
+        $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
+        $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
+    } else {
+        $themeModel = Cms_Theme::class;
+        $variableModel = Cms_variable::class;
+        $templateModel = Cms_Template::class;
+    }
+
+    $theme = $themeModel::first() ?? $variableModel::first();
 
     if (!$theme) {
         abort(404, 'Tema no configurado');
     }
 
+    // Obtener el template desde la base de datos
+    $template = $templateModel::first();
+    
+    if (!$template) {
+        abort(404, 'Template no configurado');
+    }
+
+    $templateName = $template->template ?? 'default';
+    
+    // Limpiar el nombre del template para evitar problemas con rutas
+    $templateName = preg_replace('/[^a-zA-Z0-9_-]/', '', $templateName);
+    
+    if (empty($templateName)) {
+        $templateName = 'default';
+    }
+
+    // Generar el CSS
     $css = ":root {\n";
     for ($i = 1; $i <= 4; $i++) {
         $colorValue = $theme->{'color_'.$i} ?? '#000';
         $css .= "    --color-{$i}: {$colorValue};\n";
     }
+    
+    // ✅ AGREGAR COLOR PRIMARY Y SECONDARY
+    $colorPrimary = $theme->color_1 ?? '#000';
+    $colorSecondary = $theme->color_2 ?? '#000';
+    $css .= "    --color-primary: {$colorPrimary};\n";
+    $css .= "    --color-secondary: {$colorSecondary};\n";
+    
     for ($i = 1; $i <= 5; $i++) {
         $sizeValue = $theme->{'size_h'.$i} ?? 16;
         $fontValue = $theme->{'font_h'.$i} ?? 'Roboto';
@@ -1031,6 +1233,16 @@ public function generateThemeCss()
             $css .= ".{$colorClass} { background: var(--color-{$i}) !important; }\n";
         }
     }
+    
+    // ✅ AGREGAR CLASES PARA PRIMARY Y SECONDARY
+    $css .= ".color-primary { background: var(--color-primary) !important; }\n";
+    $css .= ".color-secondary { background: var(--color-secondary) !important; }\n";
+    $css .= ".text-primary { color: var(--color-primary) !important; }\n";
+    $css .= ".text-secondary { color: var(--color-secondary) !important; }\n";
+    $css .= ".border-primary { border-color: var(--color-primary) !important; }\n";
+    $css .= ".border-secondary { border-color: var(--color-secondary) !important; }\n";
+
+    $css .= "\n";
 
     // Tipografías
     for ($i = 1; $i <= 5; $i++) {
@@ -1041,9 +1253,17 @@ public function generateThemeCss()
         $css .= "}\n";
     }
 
-    File::put(public_path('theme.css'), $css);
+    // Crear la ruta dinámica
+    $cssPath = public_path("templates/{$templateName}/theme.css");
+    
+    // Asegurar que el directorio existe
+    if (!File::exists(dirname($cssPath))) {
+        File::makeDirectory(dirname($cssPath), 0755, true);
+    }
 
-    return back()->with('success', 'Archivo theme.css actualizado correctamente ✅');
+    File::put($cssPath, $css);
+
+    return back()->with('success', "Archivo theme.css actualizado correctamente en templates/{$templateName}/ ✅");
 }
 
 public function updateTheme(Request $request)
