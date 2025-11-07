@@ -829,14 +829,14 @@ public function theme(Request $request)
         
         if ($website) {
             // Usar modelos del tenant
-            $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::class;
+            $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_theme::class;
             $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
             $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
             $tenantId = $website->id;
             $tenantUuid = $website->uuid;
         } else {
             // Usar modelos del sistema central
-            $themeModel = Cms_Theme::class;
+            $themeModel = Cms_theme::class;
             $variableModel = Cms_variable::class;
             $templateModel = Cms_Template::class;
             $tenantId = null;
@@ -1027,7 +1027,7 @@ public function getThemeData()
     
     if ($website) {
         $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
-        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::class;
+        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_theme::class;
         $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
         
         // Para tenant, puedes filtrar por website_id si es necesario
@@ -1035,7 +1035,7 @@ public function getThemeData()
         $theme = $themeModel::first();
     } else {
         $templateModel = Cms_Template::class;
-        $themeModel = Cms_Theme::class;
+        $themeModel = Cms_theme::class;
         $variableModel = Cms_variable::class;
         
         $template = $templateModel::first();
@@ -1103,14 +1103,14 @@ public function themeCss()
     $website = app(\Hyn\Tenancy\Environment::class)->website();
     
     if ($website) {
-        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::class;
+        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_theme::class;
         $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
         
         // Si los modelos tenant necesitan filtrar por website_id
         $theme = $themeModel::where('website_id', $website->id)->first() 
                ?? $variableModel::where('website_id', $website->id)->first();
     } else {
-        $themeModel = Cms_Theme::class;
+        $themeModel = Cms_theme::class;
         $variableModel = Cms_variable::class;
         
         $theme = $themeModel::first() ?? $variableModel::first();
@@ -1174,11 +1174,11 @@ public function generateThemeCss()
     $website = app(\Hyn\Tenancy\Environment::class)->website();
     
     if ($website) {
-        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::class;
+        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_theme::class;
         $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
         $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
     } else {
-        $themeModel = Cms_Theme::class;
+        $themeModel = Cms_theme::class;
         $variableModel = Cms_variable::class;
         $templateModel = Cms_Template::class;
     }
