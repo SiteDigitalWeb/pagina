@@ -791,10 +791,10 @@ public function showForm()
 
     if ($website) {
         // Si quieres asegurarte de obtener el theme específico del tenant
-        $theme = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::first();
+        $theme = \Sitedigitalweb\Pagina\Tenant\Cms_theme::first();
     } else {
         // En sistema central, podrías querer filtrar por un campo específico
-        $theme = Cms_Theme::first();
+        $theme = Cms_theme::first();
     }
 
     return view('pagina::pages.editor', compact('theme'));
