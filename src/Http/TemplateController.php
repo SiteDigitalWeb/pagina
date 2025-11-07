@@ -1026,7 +1026,7 @@ public function getThemeData()
     $website = app(\Hyn\Tenancy\Environment::class)->website();
     
     if ($website) {
-        $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_template::class;
+        $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
         $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_Theme::class;
         $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
         
@@ -1034,7 +1034,7 @@ public function getThemeData()
         $template = $templateModel::first();
         $theme = $themeModel::first();
     } else {
-        $templateModel = Cms_template::class;
+        $templateModel = Cms_Template::class;
         $themeModel = Cms_Theme::class;
         $variableModel = Cms_variable::class;
         
