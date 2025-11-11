@@ -395,20 +395,28 @@ echo json_encode($response);
        return View('pagina::grapejs.templates');
     }
 
-    public function saveComponent(Request $request)
+public function saveComponent(Request $request)
 {
-
     $request->validate([
         'name' => 'required|string',
         'content' => 'required|string',
     ]);
 
-    // Puedes guardar esto en una tabla 'components' con campos: id, name, content, created_at...
-    \DB::table('grapes_components')->insert([
-        'name' => $request->name,
+    // Detectar si estamos en un tenant
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    
+    if ($website) {
+        // Usar modelo del tenant
+        $componentModel = \Sitedigitalweb\Pagina\Tenant\Cms_SavedComponent::class;
+    } else {
+        // Usar modelo del sistema central
+        $componentModel = Cms_SavedComponent::class;
+    }
+
+    // Guardar usando el modelo Eloquent en lugar de DB::table
+    $componentModel::create([
+        'label' => $request->name, // Asumiendo que 'name' corresponde a 'label'
         'content' => $request->content,
-        'created_at' => now(),
-        'updated_at' => now(),
     ]);
 
     return response()->json(['success' => true]);
@@ -416,7 +424,18 @@ echo json_encode($response);
 
 public function getComponents()
 {
-    $components = Cms_SavedComponent::get(['id', 'label', 'content']);
+    // Detectar si estamos en un tenant
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    
+    if ($website) {
+        // Usar modelo del tenant
+        $componentModel = \Sitedigitalweb\Pagina\Tenant\Cms_SavedComponent::class;
+    } else {
+        // Usar modelo del sistema central
+        $componentModel = Cms_SavedComponent::class;
+    }
+
+    $components = $componentModel::get(['id', 'label', 'content']);
 
     return response()->json($components->map(function ($comp) {
         return [
