@@ -339,6 +339,11 @@ private function renderComponent($component)
         return $this->renderBrandLogoSlider($component);
     }
 
+    // Manejo específico para el css-slider (nuevo componente)
+    if (($component['type'] ?? '') === 'css-slider') {
+        return $this->renderCssSlider($component);
+    }
+
     // Parámetros básicos
     $tag = $component['tagName'] ?? 'div';
     $content = $component['content'] ?? '';
@@ -347,21 +352,22 @@ private function renderComponent($component)
 
     // Manejo específico para iframes (ej: Google Maps)
     if (
-    ($component['type'] ?? '') === 'iframe' ||
-    ($component['tagName'] ?? '') === 'iframe' ||
-    ($attributes['data-gjs-type'] ?? '') === 'iframe'
+        ($component['type'] ?? '') === 'iframe' ||
+        ($component['tagName'] ?? '') === 'iframe' ||
+        ($attributes['data-gjs-type'] ?? '') === 'iframe'
     ) {
-    $attrString = $this->buildAttributesString($attributes);
-    return "<iframe {$attrString}></iframe>";
+        $attrString = $this->buildAttributesString($attributes);
+        return "<iframe {$attrString}></iframe>";
     }
 
     // Manejo específico para enlaces
     if (
-    ($component['type'] ?? '') === 'link' ||
-    ($component['tagName'] ?? '') === 'a'
+        ($component['type'] ?? '') === 'link' ||
+        ($component['tagName'] ?? '') === 'a'
     ) {
-    $tag = 'a';
+        $tag = 'a';
     }
+
     // Detectar si es una imagen
     $isImage = $this->isImageComponent($component, $attributes);
 
@@ -433,37 +439,865 @@ private function renderComponent($component)
     }
 
     if (($component['type'] ?? '') === 'dynamic-form') {
-    $tag = 'form';
+        $tag = 'form';
 
-    // Forzar method y action si no están definidos
-    if (empty($attributes['method'])) {
-        $attributes['method'] = 'post';
-    }
-    if (empty($attributes['action'])) {
-        $attributes['action'] = '/cms/registro';
-    }
+        // Forzar method y action si no están definidos
+        if (empty($attributes['method'])) {
+            $attributes['method'] = 'post';
+        }
+        if (empty($attributes['action'])) {
+            $attributes['action'] = '/cms/registro';
+        }
 
-    // Insertar el input hidden para funel_id
-    $funelId = $component['funel_id'] ?? ($attributes['funel_id'] ?? null);
-    if (!empty($funelId)) {
-        $innerHtml = '<input type="hidden" name="funel_id" value="' . htmlspecialchars($funelId) . '">' . $innerHtml;
-    }
+        // Insertar el input hidden para funel_id
+        $funelId = $component['funel_id'] ?? ($attributes['funel_id'] ?? null);
+        if (!empty($funelId)) {
+            $innerHtml = '<input type="hidden" name="funel_id" value="' . htmlspecialchars($funelId) . '">' . $innerHtml;
+        }
 
-     $emailDestino = $component['email_destino'] ?? ($attributes['email_destino'] ?? null);
-    if (!empty($emailDestino)) {
-        $innerHtml = '<input type="hidden" name="email_destino" value="' . htmlspecialchars($emailDestino) . '">' . $innerHtml;
-    }
+        $emailDestino = $component['email_destino'] ?? ($attributes['email_destino'] ?? null);
+        if (!empty($emailDestino)) {
+            $innerHtml = '<input type="hidden" name="email_destino" value="' . htmlspecialchars($emailDestino) . '">' . $innerHtml;
+        }
 
-     $sujeto = $component['sujeto'] ?? ($attributes['sujeto'] ?? null);
-    if (!empty($sujeto)) {
-        $innerHtml = '<input type="hidden" name="sujeto" value="' . htmlspecialchars($sujeto) . '">' . $innerHtml;
+        $sujeto = $component['sujeto'] ?? ($attributes['sujeto'] ?? null);
+        if (!empty($sujeto)) {
+            $innerHtml = '<input type="hidden" name="sujeto" value="' . htmlspecialchars($sujeto) . '">' . $innerHtml;
+        }
     }
-}
-
-    
 
     // Construir y retornar HTML final
     return $this->buildFinalHtml($tag, $attrString, $innerHtml, $isImage);
+}
+
+/**
+ * Renderiza el componente css-slider con soporte para imágenes y videos
+ */
+/**
+ * Renderiza el componente css-slider con soporte para imágenes y videos
+ */
+private function renderCssSlider($component)
+{
+    $attributes = $component['attributes'] ?? [];
+    $components = $component['components'] ?? [];
+    
+    // Obtener datos de los slides desde las propiedades del componente
+    $slidesData = [];
+    if (isset($component['slidesData']) && is_string($component['slidesData'])) {
+        try {
+            $slidesData = json_decode($component['slidesData'], true);
+        } catch (\Exception $e) {
+            // En caso de error, usar datos por defecto
+            $slidesData = [
+                [
+                    'id' => 'slide1',
+                    'image' => 'https://picsum.photos/id/1005/1920/1080',
+                    'video' => '',
+                    'title' => 'Bienvenido a nuestro mundo visual',
+                    'description' => 'Inspiración, creatividad y tecnología al servicio de tu marca.',
+                    'buttonText' => 'Explorar más',
+                    'buttonLink' => '#',
+                    'mediaType' => 'image',
+                    'videoAutoplay' => true,
+                    'videoMuted' => true,
+                    'videoLoop' => true
+                ]
+            ];
+        }
+    }
+
+    // Obtener configuración del slider
+    $animation = $component['animation'] ?? 'slide';
+    $slideTiming = $component['slideTiming'] ?? '5000';
+    $contentEnabled = $component['contentEnabled'] ?? true;
+
+    // Construir atributos del slider principal
+    $attributes['class'] = isset($attributes['class']) 
+        ? $attributes['class'] . ' slider' 
+        : 'slider';
+    $attributes['data-animation'] = $animation;
+    $attributes['data-timing'] = $slideTiming;
+    $attributes['data-content-enabled'] = $contentEnabled ? 'true' : 'false';
+
+    $attrString = $this->buildAttributesString($attributes);
+
+    // Generar HTML de los slides
+    $slidesHtml = '<div class="slides">';
+    
+    foreach ($slidesData as $index => $slide) {
+        // Asegurar que todos los campos tengan valores por defecto
+        $slide = $this->ensureSlideDefaults($slide);
+        
+        $isActive = $index === 0;
+        $slideClass = $isActive ? 'slide active' : 'slide';
+        
+        // Determinar el estilo según la animación
+        $slideStyle = '';
+        if ($animation !== 'slide') {
+            $slideStyle = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: ' . 
+                         ($isActive ? '1' : '0') . '; z-index: ' . ($isActive ? '2' : '1') . ';';
+        } else {
+            $slideStyle = 'position: relative; opacity: 1;';
+        }
+
+        // Contenido multimedia
+        $mediaContent = '';
+        if ($slide['mediaType'] === 'video' && !empty($slide['video'])) {
+            // Verificar si es una URL de YouTube
+            if ($this->isYouTubeUrl($slide['video'])) {
+                $youtubeEmbedUrl = $this->convertToYouTubeEmbedUrl($slide['video']);
+                $mediaContent = '
+                    <div class="video-container">
+                        <iframe 
+                            class="youtube-video"
+                            src="' . htmlspecialchars($youtubeEmbedUrl) . '"
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen
+                            loading="lazy"
+                        ></iframe>
+                        <div class="video-overlay"></div>
+                    </div>
+                ';
+            } else {
+                // Video normal (MP4, WebM, etc.)
+                $mediaContent = '
+                    <video 
+                        class="slide-video" 
+                        ' . ($slide['videoAutoplay'] ? 'autoplay' : '') . ' 
+                        ' . ($slide['videoMuted'] ? 'muted' : '') . ' 
+                        ' . ($slide['videoLoop'] ? 'loop' : '') . '
+                        playsinline
+                        preload="metadata"
+                    >
+                        <source src="' . htmlspecialchars($slide['video']) . '" type="video/mp4">
+                        Tu navegador no soporta el elemento video.
+                    </video>
+                    <div class="video-overlay"></div>
+                ';
+            }
+        } else {
+            $mediaContent = '<img src="' . htmlspecialchars($slide['image']) . '" alt="' . htmlspecialchars($slide['title']) . '" class="slide-image">';
+        }
+
+        // Contenido del slide
+        $slideContent = '';
+        if ($contentEnabled) {
+            $slideContent = '
+                <div class="slide-content">
+                    <h2>' . htmlspecialchars($slide['title']) . '</h2>
+                    <p>' . htmlspecialchars($slide['description']) . '</p>
+                    <a href="' . htmlspecialchars($slide['buttonLink']) . '">' . htmlspecialchars($slide['buttonText']) . '</a>
+                </div>
+            ';
+        }
+
+        $slidesHtml .= '
+            <div class="' . $slideClass . '" data-slide-id="' . htmlspecialchars($slide['id']) . '" data-media-type="' . htmlspecialchars($slide['mediaType']) . '" style="' . $slideStyle . '">
+                ' . $mediaContent . '
+                ' . $slideContent . '
+            </div>
+        ';
+    }
+    
+    $slidesHtml .= '</div>';
+
+    // Controles de navegación
+    $controlsHtml = '
+        <button class="nav-arrow prev">❮</button>
+        <button class="nav-arrow next">❯</button>
+        <div class="dots">
+    ';
+    
+    foreach ($slidesData as $index => $slide) {
+        $controlsHtml .= '<span class="dot' . ($index === 0 ? ' active' : '') . '"></span>';
+    }
+    
+    $controlsHtml .= '</div>';
+
+    // CSS del slider
+    $cssStyles = $this->getCssSliderStyles();
+
+    // JavaScript del slider
+    $jsScript = $this->getCssSliderScript();
+
+    // HTML completo del slider
+    $fullHtml = $cssStyles . $slidesHtml . $controlsHtml . $jsScript;
+
+    return '<div ' . $attrString . '>' . $fullHtml . '</div>';
+}
+
+/**
+ * Verifica si una URL es de YouTube
+ */
+private function isYouTubeUrl($url)
+{
+    $pattern = '/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/';
+    return preg_match($pattern, $url) === 1;
+}
+
+/**
+ * Convierte una URL de YouTube a URL de embed
+ */
+private function convertToYouTubeEmbedUrl($url)
+{
+    // Extraer el ID del video de YouTube
+    $videoId = '';
+    
+    // Patrón para URLs regulares de YouTube
+    if (preg_match('/^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&?\/\s]+)/', $url, $matches)) {
+        $videoId = $matches[1];
+    }
+    
+    // Si no se pudo extraer el ID, retornar URL original
+    if (empty($videoId)) {
+        return $url;
+    }
+    
+    // Construir URL de embed con parámetros para autoplay silenciado
+    $embedUrl = "https://www.youtube.com/embed/{$videoId}";
+    $params = [
+        'autoplay=1',
+        'mute=1',
+        'loop=1',
+        'playlist=' . $videoId, // Necesario para loop
+        'controls=0', // Ocultar controles
+        'modestbranding=1', // Menos branding
+        'rel=0', // No mostrar videos relacionados al final
+        'enablejsapi=1' // Habilitar API de JavaScript
+    ];
+    
+    return $embedUrl . '?' . implode('&', $params);
+}
+
+/**
+ * Asegura que todos los campos del slide tengan valores por defecto
+ */
+private function ensureSlideDefaults($slide)
+{
+    return [
+        'id' => $slide['id'] ?? 'slide1',
+        'image' => $slide['image'] ?? 'https://picsum.photos/id/1005/1920/1080',
+        'video' => $slide['video'] ?? '',
+        'title' => $slide['title'] ?? 'Título del Slide',
+        'description' => $slide['description'] ?? 'Descripción del slide...',
+        'buttonText' => $slide['buttonText'] ?? 'Explorar más',
+        'buttonLink' => $slide['buttonLink'] ?? '#',
+        'mediaType' => $slide['mediaType'] ?? 'image',
+        'videoAutoplay' => $slide['videoAutoplay'] ?? true,
+        'videoMuted' => $slide['videoMuted'] ?? true,
+        'videoLoop' => $slide['videoLoop'] ?? true
+    ];
+}
+
+
+/**
+ * Retorna los estilos CSS para el css-slider
+ */
+/**
+ * Retorna los estilos CSS para el css-slider
+ */
+private function getCssSliderStyles()
+{
+    return '
+    <style>
+        .slider {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            font-family: system-ui, sans-serif;
+        }
+
+        .slides {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
+
+        .slide {
+            min-width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            transition: all 0.8s ease-in-out;
+        }
+
+        .slide-image {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        .slide-video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        .video-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .youtube-video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: none;
+            z-index: 0;
+        }
+
+        /* Ajustar relación de aspecto para YouTube */
+        @media (min-aspect-ratio: 16/9) {
+            .youtube-video {
+                width: 100%;
+                height: auto;
+                min-height: 100%;
+            }
+        }
+
+        @media (max-aspect-ratio: 16/9) {
+            .youtube-video {
+                width: auto;
+                height: 100%;
+                min-width: 100%;
+            }
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+
+        .slide-content {
+            position: relative;
+            z-index: 2;
+            background: rgba(0, 0, 0, 0.45);
+            padding: 25px 40px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .slide-content h2 {
+            margin: 0 0 10px;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .slide-content p {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .slide-content a {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #fff;
+            color: #000;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .slide-content a:hover {
+            background: #e9e9e9;
+        }
+
+        .nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.4);
+            color: #fff;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 10px 15px;
+            border-radius: 50%;
+            z-index: 10;
+            transition: background 0.3s;
+            font-family: inherit;
+        }
+
+        .nav-arrow:hover {
+            background: rgba(0,0,0,0.6);
+        }
+
+        .prev { left: 25px; }
+        .next { right: 25px; }
+
+        .dots {
+            position: absolute;
+            bottom: 25px;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .dot {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin: 0 6px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .dot.active {
+            background: #fff;
+            transform: scale(1.2);
+        }
+
+        /* ANIMACIONES */
+        .slider[data-animation="slide"] .slides {
+            transition: transform 0.8s ease-in-out;
+            transform: translateX(0%);
+        }
+
+        .slider[data-animation="slide"] .slide {
+            position: relative !important;
+            opacity: 1 !important;
+        }
+
+        .slider[data-animation="fade"] .slides {
+            position: relative;
+            transform: none !important;
+            transition: none !important;
+        }
+        
+        .slider[data-animation="fade"] .slide {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            opacity: 0;
+        }
+        
+        .slider[data-animation="fade"] .slide.active {
+            opacity: 1 !important;
+            z-index: 2 !important;
+        }
+
+        .slider[data-animation="zoom"] .slides {
+            position: relative;
+            transform: none !important;
+            transition: none !important;
+        }
+        
+        .slider[data-animation="zoom"] .slide {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            transform: scale(0.8) !important;
+            opacity: 0;
+        }
+        
+        .slider[data-animation="zoom"] .slide.active {
+            transform: scale(1) !important;
+            opacity: 1 !important;
+            z-index: 2 !important;
+        }
+
+        .slider[data-animation="flip"] .slides {
+            perspective: 1000px;
+            transform: none !important;
+            transition: none !important;
+        }
+        
+        .slider[data-animation="flip"] .slide {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            transform: rotateY(180deg) !important;
+            opacity: 0;
+        }
+        
+        .slider[data-animation="flip"] .slide.active {
+            transform: rotateY(0deg) !important;
+            opacity: 1 !important;
+            z-index: 2 !important;
+        }
+
+        .slider[data-animation="cube"] .slides {
+            perspective: 1200px;
+            transform-style: preserve-3d;
+            transform: none !important;
+            transition: none !important;
+        }
+        
+        .slider[data-animation="cube"] .slide {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            transform: rotateY(90deg) translateZ(300px) !important;
+            opacity: 0;
+        }
+        
+        .slider[data-animation="cube"] .slide.active {
+            transform: rotateY(0deg) translateZ(0) !important;
+            opacity: 1 !important;
+            z-index: 2 !important;
+        }
+
+        .slider[data-animation="coverflow"] .slides {
+            perspective: 1000px;
+            transform-style: preserve-3d;
+            transform: none !important;
+            transition: none !important;
+        }
+        
+        .slider[data-animation="coverflow"] .slide {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            transform: rotateY(45deg) scale(0.8) !important;
+            opacity: 0.5;
+        }
+        
+        .slider[data-animation="coverflow"] .slide.active {
+            transform: rotateY(0deg) scale(1) !important;
+            opacity: 1 !important;
+            z-index: 2 !important;
+        }
+
+        @media (max-width: 768px) {
+            .slider {
+                height: 70vh;
+            }
+            
+            .slide-content {
+                padding: 15px 25px;
+                max-width: 90%;
+            }
+            
+            .slide-content h2 {
+                font-size: 1.6rem;
+            }
+            
+            .slide-content p {
+                font-size: 1rem;
+            }
+            
+            .nav-arrow {
+                font-size: 1.5rem;
+                padding: 8px 12px;
+            }
+            
+            .prev { left: 15px; }
+            .next { right: 15px; }
+            
+            .dots {
+                bottom: 15px;
+            }
+
+            .slider[data-animation] .slide {
+                transform: none !important;
+                opacity: 1 !important;
+            }
+            
+            .slider[data-animation] .slide:not(.active) {
+                display: none !important;
+            }
+
+            /* En móviles, desactivar autoplay de YouTube */
+            .youtube-video {
+                pointer-events: none;
+            }
+        }
+    </style>
+    ';
+}
+
+/**
+ * Retorna el script JavaScript para el css-slider
+ */
+private function getCssSliderScript()
+{
+    return '
+    <script>
+        (function() {
+            function initSlider() {
+                const sliders = document.querySelectorAll(\'.slider\');
+                
+                sliders.forEach(function(slider) {
+                    const slidesContainer = slider.querySelector(\'.slides\');
+                    const slides = slider.querySelectorAll(\'.slide\');
+                    const dots = slider.querySelectorAll(\'.dot\');
+                    const prev = slider.querySelector(\'.prev\');
+                    const next = slider.querySelector(\'.next\');
+                    const animation = slider.getAttribute(\'data-animation\') || \'slide\';
+                    
+                    let slideTiming = parseInt(slider.getAttribute(\'data-timing\'));
+                    if (isNaN(slideTiming) || slideTiming < 0) {
+                        slideTiming = 5000;
+                    }
+                    
+                    if (!slidesContainer || slides.length === 0) {
+                        return;
+                    }
+                    
+                    let currentIndex = 0;
+                    let autoPlayInterval = null;
+                    let lastSlideChange = Date.now();
+
+                    function handleVideoPlayback(slide, shouldPlay) {
+                        const video = slide.querySelector(\'.slide-video\');
+                        if (!video) return;
+
+                        try {
+                            if (shouldPlay) {
+                                const mediaType = slide.getAttribute(\'data-media-type\');
+                                if (mediaType === \'video\') {
+                                    video.currentTime = 0;
+                                    const playPromise = video.play();
+                                    if (playPromise !== undefined) {
+                                        playPromise.catch(error => {
+                                            console.log(\'Auto-play de video prevenido:\', error);
+                                        });
+                                    }
+                                }
+                            } else {
+                                video.pause();
+                                video.currentTime = 0;
+                            }
+                        } catch (error) {
+                            console.log(\'Error controlando video:\', error);
+                        }
+                    }
+
+                    function initializeAnimation() {
+                        if (animation === \'slide\') {
+                            slidesContainer.style.transform = \'translateX(0%)\';
+                            slidesContainer.style.transition = \'transform 0.8s ease-in-out\';
+                            slides.forEach((slide, i) => {
+                                slide.style.position = \'relative\';
+                                slide.style.opacity = \'1\';
+                                slide.style.transform = \'none\';
+                                slide.style.zIndex = \'\';
+                                slide.classList.toggle(\'active\', i === 0);
+                                handleVideoPlayback(slide, i === 0);
+                            });
+                        } else {
+                            slidesContainer.style.transform = \'none\';
+                            slidesContainer.style.transition = \'none\';
+                            slides.forEach((slide, i) => {
+                                slide.style.position = \'absolute\';
+                                slide.style.top = \'0\';
+                                slide.style.left = \'0\';
+                                slide.style.width = \'100%\';
+                                slide.style.height = \'100%\';
+                                slide.style.zIndex = i === 0 ? \'2\' : \'1\';
+                                slide.style.opacity = i === 0 ? \'1\' : \'0\';
+                                slide.classList.toggle(\'active\', i === 0);
+                                handleVideoPlayback(slide, i === 0);
+                                
+                                switch(animation) {
+                                    case \'zoom\':
+                                        slide.style.transform = i === 0 ? \'scale(1)\' : \'scale(0.8)\';
+                                        break;
+                                    case \'flip\':
+                                        slide.style.transform = i === 0 ? \'rotateY(0deg)\' : \'rotateY(180deg)\';
+                                        break;
+                                    case \'cube\':
+                                        slide.style.transform = i === 0 ? \'rotateY(0deg) translateZ(0)\' : \'rotateY(90deg) translateZ(300px)\';
+                                        break;
+                                    case \'coverflow\':
+                                        slide.style.transform = i === 0 ? \'rotateY(0deg) scale(1)\' : \'rotateY(45deg) scale(0.8)\';
+                                        break;
+                                    default:
+                                        slide.style.transform = \'none\';
+                                }
+                            });
+                        }
+                    }
+
+                    function updateSlider(index) {
+                        const currentSlide = slides[currentIndex];
+                        if (currentSlide) {
+                            handleVideoPlayback(currentSlide, false);
+                        }
+                        
+                        if (animation === \'slide\') {
+                            slidesContainer.style.transform = \`translateX(-\${index * 100}%)\`;
+                            slides.forEach((slide, i) => {
+                                slide.classList.toggle(\'active\', i === index);
+                            });
+                        } else {
+                            slides.forEach((slide, i) => {
+                                if (i === index) {
+                                    slide.classList.add(\'active\');
+                                    slide.style.opacity = \'1\';
+                                    slide.style.zIndex = \'2\';
+                                    
+                                    switch(animation) {
+                                        case \'zoom\':
+                                            slide.style.transform = \'scale(1)\';
+                                            break;
+                                        case \'flip\':
+                                            slide.style.transform = \'rotateY(0deg)\';
+                                            break;
+                                        case \'cube\':
+                                            slide.style.transform = \'rotateY(0deg) translateZ(0)\';
+                                            break;
+                                        case \'coverflow\':
+                                            slide.style.transform = \'rotateY(0deg) scale(1)\';
+                                            break;
+                                        default:
+                                            slide.style.transform = \'none\';
+                                    }
+                                } else {
+                                    slide.classList.remove(\'active\');
+                                    slide.style.opacity = \'0\';
+                                    slide.style.zIndex = \'1\';
+                                    
+                                    switch(animation) {
+                                        case \'zoom\':
+                                            slide.style.transform = \'scale(0.8)\';
+                                            break;
+                                        case \'flip\':
+                                            slide.style.transform = \'rotateY(180deg)\';
+                                            break;
+                                        case \'cube\':
+                                            slide.style.transform = \'rotateY(90deg) translateZ(300px)\';
+                                            break;
+                                        case \'coverflow\':
+                                            slide.style.transform = \'rotateY(45deg) scale(0.8)\';
+                                            break;
+                                        default:
+                                            slide.style.transform = \'none\';
+                                    }
+                                }
+                            });
+                        }
+                        
+                        const newSlide = slides[index];
+                        if (newSlide) {
+                            handleVideoPlayback(newSlide, true);
+                        }
+                        
+                        dots.forEach((dot, i) => dot.classList.toggle(\'active\', i === index));
+                        currentIndex = index;
+                        lastSlideChange = Date.now();
+                    }
+
+                    function nextSlide() {
+                        const newIndex = (currentIndex + 1) % slides.length;
+                        updateSlider(newIndex);
+                    }
+
+                    function prevSlide() {
+                        const newIndex = (currentIndex - 1 + slides.length) % slides.length;
+                        updateSlider(newIndex);
+                    }
+
+                    function setupAutoPlay() {
+                        if (autoPlayInterval) {
+                            clearInterval(autoPlayInterval);
+                            autoPlayInterval = null;
+                        }
+                        
+                        if (slides.length > 1 && slideTiming > 0) {
+                            autoPlayInterval = setInterval(() => {
+                                const now = Date.now();
+                                const timeSinceLastChange = now - lastSlideChange;
+                                
+                                if (timeSinceLastChange >= slideTiming) {
+                                    nextSlide();
+                                }
+                            }, 1000);
+                        }
+                    }
+
+                    function setupEventListeners() {
+                        if (next) {
+                            next.onclick = function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                nextSlide();
+                            };
+                        }
+
+                        if (prev) {
+                            prev.onclick = function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                prevSlide();
+                            };
+                        }
+
+                        dots.forEach((dot, i) => {
+                            dot.onclick = function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                updateSlider(i);
+                            };
+                        });
+                    }
+
+                    function initializeSlider() {
+                        setupEventListeners();
+                        initializeAnimation();
+                        updateSlider(0);
+                        setupAutoPlay();
+                    }
+
+                    initializeSlider();
+                });
+            }
+
+            function startInitialization() {
+                if (document.readyState === \'loading\') {
+                    document.addEventListener(\'DOMContentLoaded\', initSlider);
+                } else {
+                    initSlider();
+                }
+
+                setTimeout(initSlider, 100);
+            }
+
+            startInitialization();
+        })();
+    </script>
+    ';
 }
 
 

@@ -240,7 +240,7 @@
     @endif
 
     <div class="container" style="padding: 1110px 0; text-align: center;">
-      dff
+  SITE CMS 
     </div>
   </div>
 
@@ -2673,6 +2673,8 @@ document.getElementById('iconSelectorModal').addEventListener('hide.bs.modal', f
     editor.off('component:selected.manualIcons');
 });
 </script>
+
+
 
   @include($web->template . '.assets-web.assets-grapejs')
 </body>

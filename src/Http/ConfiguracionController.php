@@ -25,7 +25,7 @@ use DigitalsiteSaaS\Pagina\Whatsapp;
 use App\User;
 use Excel;
 use GuzzleHttp\Client;
-use DigitalsiteSaaS\Pagina\Seo;
+use Sitedigitalweb\Pagina\Cms_seo;
 
 class ConfiguracionController extends Controller
 {
@@ -215,45 +215,51 @@ class ConfiguracionController extends Controller
      return Redirect('gestor/ver-templates')->with('status', 'ok_create');
     }
 
-      public function seo(){
-    if(!$this->tenantName){  
-     $seo = Seo::where('id', '=', '1')->get();
-     }else{
-     $seo = \DigitalsiteSaaS\Pagina\Tenant\Seo::where('id', '=', '1')->get();   
-     }
-     return View('pagina::configuracion.seo')->with('seo', $seo);
+    public function seo(){
+     $model = $this->tenantName
+        ? \Sitedigitalweb\Pagina\Tenant\Cms_seo::class
+        : Cms_seo::class;
+
+    $seo = $model::find(1);
+
+    return view('pagina::configuracion.seo', compact('seo'));
     }
 
-    public function updateseo(){
-     $input = Input::all();
-     if(!$this->tenantName){
-     $contenido = Seo::find(1);
-     }else{
-     $contenido = \DigitalsiteSaaS\Pagina\Tenant\Seo::find(1);
-     }
-     $contenido->idioma = Input::get('idioma');
-     $contenido->canonical = Input::get('canonical');
-     $contenido->robots = Input::get('robot');
-     $contenido->og_type = Input::get('og_type');
-     $contenido->og_image = Input::get('FilePath');
-     $contenido->og_url = Input::get('og_url');
-     $contenido->og_title = Input::get('og_title');
-     $contenido->og_name = Input::get('og_name');
-     $contenido->og_description = Input::get('og_description');
-     $contenido->twitter_card = Input::get('twitter_card');
-     $contenido->twitter_site = Input::get('twitter_site');
-     $contenido->twitter_creator = Input::get('twitter_creator');
-     $contenido->twitter_title = Input::get('twitter_title');
-     $contenido->twitter_description = Input::get('twitter_description');
-     $contenido->twitter_image = Input::get('FilePatha');
-     $contenido->analitica = Input::get('analitica');
-     $contenido->ads = Input::get('ads');
-     $contenido->ico = Input::get('FilePathb');
-     $contenido->icoapple = Input::get('FilePathc');
+    public function updateseo(Request $request)
+{
+    $model = $this->tenantName
+        ? \DigitalsiteSaaS\Pagina\Tenant\Cms_seo::class
+        : Cms_seo::class;
 
-     $contenido->save();
-     return Redirect('gestor/ver-templates')->with('status', 'ok_update');
-    }
+    $contenido = $model::findOrFail(1);
+
+    $contenido->fill([
+        'idioma'               => $request->input('idioma'),
+        'canonical'            => $request->input('canonical'),
+        'robots'               => $request->input('robot'),
+        'og_type'              => $request->input('og_type'),
+        'og_image'             => $request->input('FilePath'),
+        'og_url'               => $request->input('og_url'),
+        'og_title'             => $request->input('og_title'),
+        'og_name'              => $request->input('og_name'),
+        'og_description'       => $request->input('og_description'),
+        'twitter_card'         => $request->input('twitter_card'),
+        'twitter_site'         => $request->input('twitter_site'),
+        'twitter_creator'      => $request->input('twitter_creator'),
+        'twitter_title'        => $request->input('twitter_title'),
+        'twitter_description'  => $request->input('twitter_description'),
+        'twitter_image'        => $request->input('FilePatha'),
+        'analitica'            => $request->input('analitica'),
+        'ads'                  => $request->input('ads'),
+        'ico'                  => $request->input('FilePathb'),
+        'icoapple'             => $request->input('FilePathc'),
+    ]);
+
+    $contenido->save();
+
+    return redirect('sd/seo')->with('status', 'ok_update');
+}
+
 
     public function venta(){
      if(!$this->tenantName){  

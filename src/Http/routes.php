@@ -6,7 +6,8 @@ Route::post('/smtp/send-test', [SmtpConfigController::class, 'sendTestMail'])->n
 
 Route::prefix('sd')->group(function () {
 
-
+Route::post('seo', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@updateseo');
+Route::get('seo', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@seo');
 Route::get('/smtp', [Sitedigitalweb\Pagina\Http\SmtpConfigController::class, 'index'])->name('smtp.index');
 Route::post('/smtp', [Sitedigitalweb\Pagina\Http\SmtpConfigController::class, 'store'])->name('smtp.store');
 Route::post('/smtp/test', [Sitedigitalweb\Pagina\Http\SmtpConfigController::class, 'sendTestMail'])->name('smtp.test');
@@ -93,6 +94,20 @@ Route::prefix('images')->group(function () {
 });
 
 
+// File Manager Routes - RUTAS RELATIVAS
+Route::prefix('file-manager')->group(function () {
+    Route::get('/', [App\Http\Controllers\FileManagerController::class, 'index'])
+         ->name('filemanager.index')
+         ->middleware('web');
+    
+    Route::post('/upload', [App\Http\Controllers\FileManagerController::class, 'upload'])
+         ->name('filemanager.upload');
+         
+    Route::post('/create-folder', [App\Http\Controllers\FileManagerController::class, 'createFolder'])
+         ->name('filemanager.create-folder');
+});
+
+
 Route::group(['middleware' => ['auth','administrador']], function (){
 
 
@@ -120,7 +135,7 @@ Route::post('gestion/contenidos/crearlogofooter', 'DigitalsiteSaaS\Pagina\Http\C
 Route::post('gestion/contenidos/actualizarservicio', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@actualizarservicio');
 Route::post('gestion/contenidos/actualizarrecaptcha', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@actualizarrecaptcha');
 Route::post('gestion/contenidos/actualizarventa', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@actualizarventa');
-Route::post('gestion/contenidos/seoupdate', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@updateseo');
+
 Route::post('gestion/contenidos/redes-sociales', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@updatered');
 
 Route::get('gestion/redes-sociales', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@verredes'); 
