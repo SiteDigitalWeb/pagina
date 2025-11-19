@@ -96,14 +96,14 @@ Route::prefix('images')->group(function () {
 
 // File Manager Routes - RUTAS RELATIVAS
 Route::prefix('file-manager')->group(function () {
-    Route::get('/', [App\Http\Controllers\FileManagerController::class, 'index'])
+    Route::get('/', [Sitedigitalweb\Pagina\Http\FileManagerController::class, 'index'])
          ->name('filemanager.index')
          ->middleware('web');
     
-    Route::post('/upload', [App\Http\Controllers\FileManagerController::class, 'upload'])
+    Route::post('/upload', [Sitedigitalweb\Pagina\Http\FileManagerController::class, 'upload'])
          ->name('filemanager.upload');
          
-    Route::post('/create-folder', [App\Http\Controllers\FileManagerController::class, 'createFolder'])
+    Route::post('/create-folder', [Sitedigitalweb\Pagina\Http\FileManagerController::class, 'createFolder'])
          ->name('filemanager.create-folder');
 });
 
