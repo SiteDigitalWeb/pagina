@@ -11,6 +11,7 @@ use Sitedigitalweb\Pagina\Cms_Template;
 use Illuminate\Support\Facades\Schema;
 use Sitedigitalweb\Pagina\Cms_theme;
 use Sitedigitalweb\Pagina\Cms_variable;
+use Sitedigitalweb\Pagina\Cms_seo;
 use DB;
 use File;
 
@@ -89,7 +90,7 @@ public function preview($id)
     $templateFolder = $web->template ?? 'default';
 
     // Render dinámico de la vista
-    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo'));
+    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo'));
 }
 
 
@@ -100,6 +101,7 @@ public function page()
         // Entorno tenant específico, sin usar website_id
         $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', '/')->firstOrFail();
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
+        $seo_web = \Sitedigitalweb\Pagina\Tenant\Cms_seo::first();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
         $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
         ->where('visibility', 1)
@@ -113,6 +115,7 @@ public function page()
         // Entorno central (host)
         $template = Page::where('slug', '/')->firstOrFail();
         $recaptcha = Cms_Recaptcha::first();
+        $seo_web = Cms_seo::first();
         $web = Cms_Template::first();
         $menuPages = Page::whereNull('page_id')
         ->where('visibility', 1)
@@ -145,7 +148,7 @@ public function page()
     // Suponiendo que en cms_template tienes una columna 'template_name'
     $templateFolder = $web->template ?? 'default';
 
-    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo'));
+    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web'));
 
 }
 

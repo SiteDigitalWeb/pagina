@@ -238,7 +238,7 @@ class ConfiguracionController extends Controller
         'canonical'            => $request->input('canonical'),
         'robots'               => $request->input('robot'),
         'og_type'              => $request->input('og_type'),
-        'og_image'             => $request->input('FilePath'),
+        'og_image'             => $request->input('og_image'),
         'og_url'               => $request->input('og_url'),
         'og_title'             => $request->input('og_title'),
         'og_name'              => $request->input('og_name'),
@@ -248,11 +248,11 @@ class ConfiguracionController extends Controller
         'twitter_creator'      => $request->input('twitter_creator'),
         'twitter_title'        => $request->input('twitter_title'),
         'twitter_description'  => $request->input('twitter_description'),
-        'twitter_image'        => $request->input('FilePatha'),
+        'twitter_image'        => $request->input('twitter_image'),
         'analitica'            => $request->input('analitica'),
         'ads'                  => $request->input('ads'),
-        'ico'                  => $request->input('FilePathb'),
-        'icoapple'             => $request->input('FilePathc'),
+        'ico'                  => $request->input('ico'),
+        'icoapple'             => $request->input('icoapple'),
     ]);
 
     $contenido->save();
