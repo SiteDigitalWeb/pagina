@@ -84,6 +84,7 @@
 
     <!-- ESTILOS -->
     @include($web->template.'.assets-web.assets-preview')
+    
     <link rel="stylesheet" href="/partials/estilos/estiloscomponentes.css"/>
 
     <style>{!! $styles !!}</style>
@@ -98,8 +99,10 @@
     }
     </script>
 
-</head>
+     @include('genericos.estadistica')
 
+</head>
+@include($web->template.'.pages.menu')
 <body>
 
 @if(session('success'))

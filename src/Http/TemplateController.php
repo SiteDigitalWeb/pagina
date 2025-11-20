@@ -46,6 +46,7 @@ public function preview($id)
         $template = \Sitedigitalweb\Pagina\Tenant\Page::findOrFail($id);
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
+        $seo_web = \Sitedigitalweb\Pagina\Tenant\Cms_seo::first();
         $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
         ->where('visibility', 1)
         ->orderBy('position', 'asc')
@@ -58,6 +59,7 @@ public function preview($id)
         $template = Page::findOrFail($id);
         $recaptcha = Cms_Recaptcha::first();
         $web = Cms_Template::first();
+        $seo_web = Cms_seo::first();
         $menuPages = Page::whereNull('page_id')
         ->where('visibility', 1)
         ->orderBy('position', 'asc')
@@ -90,7 +92,7 @@ public function preview($id)
     $templateFolder = $web->template ?? 'default';
 
     // Render dinámico de la vista
-    return view('page::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo'));
+    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo','seo_web'));
 }
 
 
