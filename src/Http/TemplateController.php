@@ -150,7 +150,7 @@ public function page()
     // Suponiendo que en cms_template tienes una columna 'template_name'
     $templateFolder = $web->template ?? 'default';
 
-    return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web'));
+    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web'));
 
 }
 

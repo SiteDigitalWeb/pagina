@@ -100,29 +100,13 @@
     </script>
 
      @include('genericos.estadistica')
+     @include('genericos.mensaje')
 
 </head>
-@include($web->template.'.pages.menu')
+
+    @include($web->template.'.pages.menu')
+
 <body>
-
-@if(session('success'))
-<div id="customSuccessModal" class="modern-modal-overlay">
-    <div class="modern-modal">
-        <div class="modern-modal-icon">✅</div>
-        <h2 class="modern-modal-title">¡Mensaje enviado!</h2>
-        <p class="modern-modal-text">{{ session('success') }}</p>
-        <button class="modern-modal-button" onclick="closeCustomModal()">Cerrar</button>
-    </div>
-</div>
-
-<script>
-    function closeCustomModal() {
-        const modal = document.getElementById('customSuccessModal');
-        if (modal) modal.remove();
-    }
-    setTimeout(closeCustomModal, 4000);
-</script>
-@endif
 
 <!-- CONTENIDO -->
 @if(!empty($content))
@@ -136,11 +120,6 @@
 <!-- SCRIPTS -->
 <script defer>{!! $scripts !!}</script>
 
-<!-- SCRIPTS DE TERCEROS (CON defer PARA SEO + RENDIMIENTO) -->
-<script defer src="https://www.google.com/recaptcha/api.js?render={{ $recaptcha->site_key }}"></script>
-
-<script defer src="/partials/scripts/recaptcha-init.js"></script>
-<script defer src="/partials/scripts/contact-form.js"></script>
 <script defer src="/partials/scripts/testimonios.js"></script>
 <script defer src="/partials/scripts/tabs.js"></script>
 <script defer src="/partials/scripts/acordeon.js"></script>
@@ -148,6 +127,46 @@
 <script defer src="/partials/scripts/whatsapp-multi.js"></script>
 <script defer src="/partials/scripts/modal.js"></script>
 <script defer src="/partials/scripts/whatsapp.js"></script>
+
+<!-- SCRIPTS DE TERCEROS (CON defer PARA SEO + RENDIMIENTO) -->
+<script defer src="https://www.google.com/recaptcha/api.js?render={{ $recaptcha->site_key }}"></script>
+<script>
+ grecaptcha.ready(function() {
+ grecaptcha.execute('{{ $recaptcha->site_key }}', {action: 'submit'}).then(function(token) {
+  document.getElementById('recaptcha_token').value = token;
+ });
+});
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById('contact_form');
+
+    // Crear input oculto para CSRF Token
+    const csrfTokenInput = document.createElement('input');
+    csrfTokenInput.type = 'hidden';
+    csrfTokenInput.name = '_token';
+    csrfTokenInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    form.appendChild(csrfTokenInput);
+
+    // Crear input oculto para reCAPTCHA Token
+    const recaptchaTokenInput = document.createElement('input');
+    recaptchaTokenInput.type = 'hidden';
+    recaptchaTokenInput.name = 'recaptcha_token';
+    recaptchaTokenInput.id = 'recaptcha_token';
+    form.appendChild(recaptchaTokenInput);
+
+    // Generar token reCAPTCHA al enviar el formulario
+    form.addEventListener('submit', function(e) {
+        e.preventDefault(); // Evita envío inmediato
+        grecaptcha.ready(function() {
+            grecaptcha.execute('{{ $recaptcha->site_key }}', {action: 'submit'}).then(function(token) {
+                document.getElementById('recaptcha_token').value = token;
+                form.submit(); // Envía el formulario después de insertar el token
+            });
+        });
+    });
+});
+</script>
 
 @stack('scripts')
 
