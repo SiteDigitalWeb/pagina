@@ -2,6 +2,19 @@
 
 Route::group(['middleware' => ['auth','administrador']], function (){
 
+
+Route::get('users/import', [Sitedigitalweb\Pagina\Http\WebController::class, 'showImportForm'])->name('users.show.import');
+Route::post('users/import', [Sitedigitalweb\Pagina\Http\WebController::class, 'import'])->name('users.import');
+Route::get('users/export', [Sitedigitalweb\Pagina\Http\WebController::class, 'exportUsers'])->name('users.export');
+Route::get('cms-users/import', [Sitedigitalweb\Pagina\Http\WebController::class, 'showCmsImportForm'])
+         ->name('cms.users.show.import');
+Route::post('cms-users/import', [Sitedigitalweb\Pagina\Http\WebController::class, 'importCmsUsers'])
+         ->name('cms.users.import');
+Route::get('cms-users/export', [Sitedigitalweb\Pagina\Http\WebController::class, 'exportCmsUsers'])
+         ->name('cms.users.export');
+Route::get('cms-users/export/template', [Sitedigitalweb\Pagina\Http\WebController::class, 'downloadCmsTemplate'])->name('cms.users.export.template');
+
+
 Route::post('/smtp/send-test', [SmtpConfigController::class, 'sendTestMail'])->name('smtp.send-test');
 
 Route::prefix('sd')->group(function () {
@@ -108,6 +121,180 @@ Route::prefix('file-manager')->group(function () {
 });
 
 
+
+
+
+
+
+
+
+
+
+Route::get('pwa/offline', function() {
+    return view('pwa.offline');
+})->name('pwa.offline');
+
+Route::get('pwa/install', function() {
+    return view('pwa.install');
+})->name('pwa.install');
+
+// Para API que pueda necesitar el Service Worker
+Route::get('/api/pwa/status', function() {
+    return response()->json([
+        'status' => 'ok',
+        'version' => '1.0.0',
+        'timestamp' => now()
+    ]);
+});
+
+Route::get('pwa/pwa-check', function() {
+    // Detectar navegador basado en User-Agent
+    $userAgent = request()->header('User-Agent', '');
+    $browser = 'Unknown';
+    
+    if (stripos($userAgent, 'Chrome') !== false && stripos($userAgent, 'Edge') === false) {
+        $browser = 'Chrome';
+    } elseif (stripos($userAgent, 'Firefox') !== false) {
+        $browser = 'Firefox';
+    } elseif (stripos($userAgent, 'Safari') !== false && stripos($userAgent, 'Chrome') === false) {
+        $browser = 'Safari';
+    } elseif (stripos($userAgent, 'Edge') !== false) {
+        $browser = 'Edge';
+    } elseif (stripos($userAgent, 'Opera') !== false) {
+        $browser = 'Opera';
+    }
+    
+    // Verificar archivos
+    $manifestExists = file_exists(public_path('manifest.json'));
+    $iconsExist = file_exists(public_path('icons/icon-192x192.png'));
+    $swExists = file_exists(public_path('sw.js'));
+    $isHttps = request()->secure();
+    $isLocal = app()->environment('local');
+    
+    // Calcular score
+    $score = 0;
+    $total = 4;
+    if ($manifestExists) $score++;
+    if ($swExists) $score++;
+    if ($iconsExist) $score++;
+    if ($isHttps || $isLocal) $score++;
+    
+    return response()->json([
+        'status' => 'ok',
+        'pwa' => [
+            'supported' => in_array($browser, ['Chrome', 'Firefox', 'Safari', 'Edge']),
+            'browser' => $browser,
+            'requires_https' => $isHttps,
+            'local_development' => $isLocal
+        ],
+        'files' => [
+            'manifest' => [
+                'exists' => $manifestExists,
+                'path' => 'public/manifest.json',
+                'size' => $manifestExists ? filesize(public_path('manifest.json')) : 0
+            ],
+            'service_worker' => [
+                'exists' => $swExists,
+                'path' => 'public/sw.js',
+                'size' => $swExists ? filesize(public_path('sw.js')) : 0
+            ],
+            'icons' => [
+                'exists' => $iconsExist,
+                '192x192' => $iconsExist,
+                '512x512' => file_exists(public_path('icons/icon-512x512.png'))
+            ]
+        ],
+        'environment' => [
+            'secure' => $isHttps,
+            'env' => app()->environment(),
+            'url' => config('app.url'),
+            'host' => request()->getHost()
+        ],
+        'score' => [
+            'current' => $score,
+            'total' => $total,
+            'percentage' => ($score / $total) * 100,
+            'grade' => ($score / $total) * 100 >= 75 ? '✅ Good' : '⚠️ Needs Improvement'
+        ],
+        'instructions' => [
+            '1. Verifica HTTPS: ' . ($isHttps ? '✅' : '❌'),
+            '2. Archivo manifest.json: ' . ($manifestExists ? '✅' : '❌'),
+            '3. Archivo sw.js: ' . ($swExists ? '✅' : '❌'),
+            '4. Iconos: ' . ($iconsExist ? '✅' : '❌')
+        ],
+        'timestamp' => now()->toIso8601String()
+    ]);
+})->name('pwa.check');
+
+
+
+Route::post('/push-subscribe', function (Illuminate\Http\Request $request) {
+    $user = auth()->user();
+
+    if (!$user) {
+        return response()->json(['error' => 'Usuario no autenticado'], 401);
+    }
+
+    $data = $request->all();
+
+    $user->updatePushSubscription(
+        $data['endpoint'],
+        $data['keys']['p256dh'],
+        $data['keys']['auth']
+    );
+
+    return response()->json(['success' => true]);
+});
+
+
+
+
+// Ruta pública para el manifest.json
+Route::get('/manifest.json', function () {
+    $manifest = PwaManifest::getActive();
+    
+    if (!$manifest) {
+        $manifest = PwaManifest::create([
+            'name' => 'SiteCMS',
+            'short_name' => 'SiteCMS',
+            'description' => 'Sistema de gestión de contenidos PWA',
+            'start_url' => '/',
+            'display' => 'standalone',
+            'background_color' => '#ffffff',
+            'theme_color' => '#000000',
+            'orientation' => 'any',
+            'scope' => '/',
+            'lang' => 'es',
+            'dir' => 'ltr',
+            'enabled' => true
+        ]);
+    }
+
+    return response()->json($manifest->toManifestArray())
+        ->header('Content-Type', 'application/json')
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+})->name('manifest.json');
+
+// Rutas de administración
+Route::prefix('admin')->name('admin.')->group(function () {
+    
+    // Dashboard
+    Route::get('/dashboard', function () {
+        return view('admin.dashboard');
+    })->name('dashboard');
+    
+    // Rutas del PWA Manifest - USANDO PARÁMETRO EXPLÍCITO
+    Route::resource('pwa', Sitedigitalweb\Pagina\Http\PwaManifestController::class)->except(['show'])->parameters([
+        'pwa' => 'pwaManifest'  // Mapear 'pwa' a 'pwaManifest'
+    ]);
+    
+    // Ruta para activar/desactivar manifest
+    Route::patch('/pwa/{pwaManifest}/toggle', [Sitedigitalweb\Pagina\Http\PwaManifestController::class, 'toggle'])
+        ->name('pwa.toggle');
+});
+
+
+
 Route::group(['middleware' => ['auth','administrador']], function (){
 
 
@@ -179,7 +366,6 @@ Route::get('gestion/municipios/{id}', 'DigitalsiteSaaS\Pagina\Http\Configuracion
 
  
 });
-
 
 
 

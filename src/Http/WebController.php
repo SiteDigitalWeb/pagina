@@ -34,6 +34,9 @@
  use Sitedigitalweb\Pagina\Cms_Recaptcha;
  use App\Http\ConnectionsHelper;
  use URL;
+ use App\Imports\CmsUsersImport;
+use App\Exports\CmsUsersExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 
@@ -449,6 +452,92 @@ public function testSmtpConfig()
         return response()->json(['error' => $e->getMessage()], 500);
     }
 }
+
+
+public function exportCmsUsers()
+    {
+        try {
+            return Excel::download(new CmsUsersExport, 'cms_usuarios_' . date('Y-m-d_His') . '.xlsx');
+        } catch (\Exception $e) {
+            Log::error('Error al exportar usuarios CMS: ' . $e->getMessage());
+            return back()->with('error', 'Error al exportar: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Mostrar formulario de importación
+     */
+    public function showImportForm()
+    {
+        return view('cms_import');
+    }
+    
+    /**
+     * Procesar importación de usuarios CMS
+     */
+    public function importCmsUsers(Request $request)
+    {
+        // Validar archivo
+        $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'mimes:xlsx,xls,csv',
+                'max:10240' // 10MB
+            ]
+        ], [
+            'file.required' => 'Por favor, seleccione un archivo.',
+            'file.mimes' => 'El archivo debe ser Excel (.xlsx, .xls) o CSV (.csv).',
+            'file.max' => 'El archivo no debe superar los 10MB.',
+        ]);
+        
+        try {
+            $import = new CmsUsersImport();
+            
+            // Importar el archivo
+            Excel::import($import, $request->file('file'));
+            
+            // Obtener estadísticas
+            $stats = $import->getStats();
+            
+            // Preparar mensaje de éxito
+            $message = '✅ Importación CMS completada exitosamente! ';
+            
+            if ($stats['created'] > 0) {
+                $message .= "✅ {$stats['created']} nuevos registros creados. ";
+            }
+            
+            if ($stats['updated'] > 0) {
+                $message .= "✏️ {$stats['updated']} registros actualizados. ";
+            }
+            
+            if ($stats['skipped'] > 0) {
+                $message .= "⏭️ {$stats['skipped']} filas omitidas (sin email o email inválido).";
+            }
+            
+            return back()->with('success', trim($message));
+            
+        } catch (\Exception $e) {
+            Log::error('Error en importación CMS: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            
+            return back()->with('error', '❌ Error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Descargar plantilla CMS
+     */
+    public function downloadCmsTemplate()
+    {
+        try {
+            $export = new CmsUsersExport();
+            return Excel::download($export, 'plantilla_cms_usuarios.xlsx');
+        } catch (\Exception $e) {
+            Log::error('Error al descargar plantilla CMS: ' . $e->getMessage());
+            return back()->with('error', 'Error al descargar plantilla.');
+        }
+    }
 
 
 
