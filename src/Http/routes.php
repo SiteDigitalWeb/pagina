@@ -247,33 +247,9 @@ Route::post('/push-subscribe', function (Illuminate\Http\Request $request) {
 });
 
 
+Route::get('/manifest.json', [Sitedigitalweb\Pagina\Http\PwaManifestController::class, 'manifest'])->name('manifest.json');
 
 
-// Ruta pública para el manifest.json
-Route::get('/manifest.json', function () {
-    $manifest = PwaManifest::getActive();
-    
-    if (!$manifest) {
-        $manifest = PwaManifest::create([
-            'name' => 'SiteCMS',
-            'short_name' => 'SiteCMS',
-            'description' => 'Sistema de gestión de contenidos PWA',
-            'start_url' => '/',
-            'display' => 'standalone',
-            'background_color' => '#ffffff',
-            'theme_color' => '#000000',
-            'orientation' => 'any',
-            'scope' => '/',
-            'lang' => 'es',
-            'dir' => 'ltr',
-            'enabled' => true
-        ]);
-    }
-
-    return response()->json($manifest->toManifestArray())
-        ->header('Content-Type', 'application/json')
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
-})->name('manifest.json');
 
 // Rutas de administración
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -292,7 +268,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::patch('/pwa/{pwaManifest}/toggle', [Sitedigitalweb\Pagina\Http\PwaManifestController::class, 'toggle'])
         ->name('pwa.toggle');
 });
-
 
 
 Route::group(['middleware' => ['auth','administrador']], function (){

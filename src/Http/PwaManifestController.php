@@ -2,9 +2,10 @@
 
 namespace Sitedigitalweb\Pagina\Http;
 
-use App\Models\PwaManifest;
+use Sitedigitalweb\Pagina\PwaManifest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+
 use App\Http\Controllers\Controller;
 
 class PwaManifestController extends Controller
@@ -137,4 +138,34 @@ class PwaManifestController extends Controller
         
         return back()->with('success', 'Estado del manifest actualizado.');
     }
+
+
+    public function manifest()
+{
+    // Usa el namespace completo o importa la clase
+    $manifest = PwaManifest::getActive();
+    
+    if (!$manifest) {
+        $manifest = PwaManifest::create([
+            'name' => 'SiteCMS',
+            'short_name' => 'SiteCMS',
+            'description' => 'Sistema de gestión de contenidos PWA',
+            'start_url' => '/',
+            'display' => 'standalone',
+            'background_color' => '#ffffff',
+            'theme_color' => '#000000',
+            'orientation' => 'any',
+            'scope' => '/',
+            'lang' => 'es',
+            'dir' => 'ltr',
+            'enabled' => true
+        ]);
+    }
+
+    return response()->json($manifest->toManifestArray())
+        ->header('Content-Type', 'application/json')
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+}
+
+    
 }
