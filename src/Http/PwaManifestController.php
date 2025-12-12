@@ -10,9 +10,30 @@ use App\Http\Controllers\Controller;
 
 class PwaManifestController extends Controller
 {
-    public function index()
-    {
+
+    private function getPwaModel()
+{
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    
+    if ($website) {
+        // Estamos en tenant
+        return \Sitedigitalweb\Pagina\Tenant\PwaManifest::class;
+    } else {
+        // Estamos en base central
+        return \Sitedigitalweb\Pagina\PwaManifest::class;
+    }
+}
+    public function index(){
+    
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    // Si estamos en tenant, simplemente usamos la base del tenant
+    if ($website) {
+         $manifests = \Sitedigitalweb\Pagina\Tenant\PwaManifest::all();
+    } else {
+        // En la base central, también usamos sin filtro
         $manifests = PwaManifest::all();
+    }
         return view('admin.pwa.index', compact('manifests'));
     }
 
@@ -22,104 +43,164 @@ class PwaManifestController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'short_name' => 'required|string|max:50',
-            'description' => 'nullable|string',
-            'start_url' => 'nullable|string',
-            'display' => 'required|in:standalone,fullscreen,minimal-ui,browser',
-            'background_color' => 'required|string|max:7',
-            'theme_color' => 'required|string|max:7',
-            'orientation' => 'required|in:any,natural,landscape,portrait',
-            'scope' => 'nullable|string',
-            'lang' => 'required|string|max:10',
-            'dir' => 'required|in:ltr,rtl,auto',
-            'icons' => 'nullable|array',
-            'screenshots' => 'nullable|array',
-            'shortcuts' => 'nullable|array',
-            'categories' => 'nullable|array',
-            'protocol_handlers' => 'nullable|array',
-            'enabled' => 'boolean'
-        ]);
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'short_name' => 'required|string|max:50',
+        'description' => 'nullable|string',
+        'start_url' => 'nullable|string',
+        'display' => 'required|in:standalone,fullscreen,minimal-ui,browser',
+        'background_color' => 'required|string|max:7',
+        'theme_color' => 'required|string|max:7',
+        'orientation' => 'required|in:any,natural,landscape,portrait',
+        'scope' => 'nullable|string',
+        'lang' => 'required|string|max:10',
+        'dir' => 'required|in:ltr,rtl,auto',
+        'icons' => 'nullable|array',
+        'screenshots' => 'nullable|array',
+        'shortcuts' => 'nullable|array',
+        'categories' => 'nullable|array',
+        'protocol_handlers' => 'nullable|array',
+        'enabled' => 'boolean'
+    ]);
 
-        // Si no se proporcionan iconos, usar valores por defecto
-        if (empty($request->icons)) {
-            $validated['icons'] = (new PwaManifest())->getDefaultIcons();
-        } else {
-            $validated['icons'] = $request->icons;
-        }
-
-        // Convertir arrays a JSON
-        $validated['icons'] = json_encode($validated['icons']);
-        $validated['screenshots'] = $request->screenshots ? json_encode($request->screenshots) : null;
-        $validated['shortcuts'] = $request->shortcuts ? json_encode($request->shortcuts) : null;
-        $validated['categories'] = $request->categories ? json_encode(explode(',', $request->categories)) : null;
-        $validated['protocol_handlers'] = $request->protocol_handlers ? json_encode($request->protocol_handlers) : null;
-
-        // Deshabilitar otros manifests si este se activa
-        if ($request->enabled) {
-            PwaManifest::where('id', '!=', 0)->update(['enabled' => false]);
-        }
-
-        PwaManifest::create($validated);
-
-        return redirect()->route('admin.pwa.index')
-            ->with('success', 'Manifest creado exitosamente.');
+    // Si no se proporcionan iconos, usar valores por defecto
+    if (empty($request->icons)) {
+        $validated['icons'] = (new \Sitedigitalweb\Pagina\PwaManifest())->getDefaultIcons();
+    } else {
+        $validated['icons'] = $request->icons;
     }
 
-    public function edit(PwaManifest $pwaManifest)
-    {
-        return view('admin.pwa.edit', compact('pwaManifest'));
+    // Convertir arrays a JSON
+    $validated['icons'] = json_encode($validated['icons']);
+    $validated['screenshots'] = $request->screenshots ? json_encode($request->screenshots) : null;
+    $validated['shortcuts'] = $request->shortcuts ? json_encode($request->shortcuts) : null;
+    $validated['categories'] = $request->categories ? json_encode(explode(',', $request->categories)) : null;
+    $validated['protocol_handlers'] = $request->protocol_handlers ? json_encode($request->protocol_handlers) : null;
+
+    // Detectar si estamos en tenant o en base central
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    if ($website) {
+        // Estamos en tenant - usar el modelo tenant
+        $modelClass = \Sitedigitalweb\Pagina\Tenant\PwaManifest::class;
+    } else {
+        // Estamos en base central - usar el modelo central
+        $modelClass = PwaManifest::class;
     }
 
-    public function update(Request $request, PwaManifest $pwaManifest)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'short_name' => 'required|string|max:50',
-            'description' => 'nullable|string',
-            'start_url' => 'nullable|string',
-            'display' => 'required|in:standalone,fullscreen,minimal-ui,browser',
-            'background_color' => 'required|string|max:7',
-            'theme_color' => 'required|string|max:7',
-            'orientation' => 'required|in:any,natural,landscape,portrait',
-            'scope' => 'nullable|string',
-            'lang' => 'required|string|max:10',
-            'dir' => 'required|in:ltr,rtl,auto',
-            'enabled' => 'boolean'
-        ]);
-
-        if ($request->has('icons')) {
-            $validated['icons'] = json_encode($request->icons);
-        }
-
-        if ($request->has('screenshots')) {
-            $validated['screenshots'] = json_encode($request->screenshots);
-        }
-
-        if ($request->has('shortcuts')) {
-            $validated['shortcuts'] = json_encode($request->shortcuts);
-        }
-
-        if ($request->has('categories')) {
-            $validated['categories'] = json_encode(explode(',', $request->categories));
-        }
-
-        if ($request->has('protocol_handlers')) {
-            $validated['protocol_handlers'] = json_encode($request->protocol_handlers);
-        }
-
-        // Deshabilitar otros manifests si este se activa
-        if ($request->enabled && !$pwaManifest->enabled) {
-            PwaManifest::where('id', '!=', $pwaManifest->id)->update(['enabled' => false]);
-        }
-
-        $pwaManifest->update($validated);
-
-        return redirect()->route('admin.pwa.index')
-            ->with('success', 'Manifest actualizado exitosamente.');
+    // Deshabilitar otros manifests del mismo entorno (tenant o central)
+    if ($request->enabled) {
+        $modelClass::where('id', '!=', 0)->update(['enabled' => false]);
     }
+
+    // Crear el nuevo manifest
+    $modelClass::create($validated);
+
+    return redirect()->route('admin.pwa.index')
+        ->with('success', 'Manifest creado exitosamente.');
+}
+
+   public function edit($id)
+{
+    // Detectar si estamos en tenant o en base central
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    if ($website) {
+        // Estamos en tenant - usar el modelo tenant
+        $pwaManifest = \Sitedigitalweb\Pagina\Tenant\PwaManifest::findOrFail($id);
+    } else {
+        // Estamos en base central - usar el modelo central
+        $pwaManifest = \Sitedigitalweb\Pagina\PwaManifest::findOrFail($id);
+    }
+    
+    return view('admin.pwa.edit', compact('pwaManifest'));
+}
+
+    public function update(Request $request, $id)
+{
+    // Obtener el modelo correcto según el contexto
+    $modelClass = $this->getPwaModel();
+    $pwaManifest = $modelClass::findOrFail($id);
+    
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'short_name' => 'required|string|max:50',
+        'description' => 'nullable|string',
+        'start_url' => 'nullable|string',
+        'display' => 'required|in:standalone,fullscreen,minimal-ui,browser',
+        'background_color' => 'required|string|max:7',
+        'theme_color' => 'required|string|max:7',
+        'orientation' => 'required|in:any,natural,landscape,portrait',
+        'scope' => 'nullable|string',
+        'lang' => 'required|string|max:10',
+        'dir' => 'required|in:ltr,rtl,auto',
+        'enabled' => 'boolean',
+        'icons' => 'nullable|array',
+        'screenshots' => 'nullable|array',
+        'shortcuts' => 'nullable|array',
+        'categories' => 'nullable|string',
+        'protocol_handlers' => 'nullable|array'
+    ]);
+
+    // Procesar iconos si se proporcionan
+    if ($request->has('icons')) {
+        $icons = $this->processIcons($request->icons);
+        $validated['icons'] = json_encode($icons);
+    }
+
+    // Procesar otros campos JSON
+    if ($request->filled('screenshots')) {
+        $validated['screenshots'] = json_encode($validated['screenshots']);
+    }
+
+    if ($request->filled('shortcuts')) {
+        $validated['shortcuts'] = json_encode($validated['shortcuts']);
+    }
+
+    if ($request->filled('categories')) {
+        $validated['categories'] = json_encode(explode(',', $validated['categories']));
+    }
+
+    if ($request->filled('protocol_handlers')) {
+        $validated['protocol_handlers'] = json_encode($validated['protocol_handlers']);
+    }
+
+    // Deshabilitar otros manifests del mismo contexto si este se activa
+    if ($request->enabled && !$pwaManifest->enabled) {
+        $modelClass::where('id', '!=', $pwaManifest->id)
+            ->update(['enabled' => false]);
+    }
+
+    $pwaManifest->update($validated);
+
+    return redirect()->route('admin.pwa.index')
+        ->with('success', 'Manifest actualizado exitosamente.');
+}
+
+/**
+ * Procesar el array de iconos desde el formulario
+ */
+private function processIcons($iconInputs)
+{
+    $icons = [];
+    
+    if (isset($iconInputs['src']) && is_array($iconInputs['src'])) {
+        foreach ($iconInputs['src'] as $index => $src) {
+            if (!empty($src) && !empty($iconInputs['sizes'][$index])) {
+                $icons[] = [
+                    'src' => $src,
+                    'sizes' => $iconInputs['sizes'][$index],
+                    'type' => $iconInputs['type'][$index] ?? 'image/png',
+                    'purpose' => $iconInputs['purpose'][$index] ?? 'any'
+                ];
+            }
+        }
+    }
+    
+    return $icons;
+}
+
 
     public function destroy(PwaManifest $pwaManifest)
     {

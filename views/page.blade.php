@@ -483,38 +483,47 @@
 })();
 </script>
 
-<!-- Example: actualizar reCAPTCHA / contact_form handler (mantener tu lógica) -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const form = document.getElementById('contact_form');
-    if (!form) return;
-    // Crear input oculto para CSRF Token
-    const csrfTokenInput = document.createElement('input');
-    csrfTokenInput.type = 'hidden';
-    csrfTokenInput.name = '_token';
-    csrfTokenInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    form.appendChild(csrfTokenInput);
+    // Seleccionar TODOS los formularios de la página
+    const forms = document.querySelectorAll('form');
+   
+    forms.forEach((form, index) => {
+        // Crear input oculto para CSRF Token
+        const csrfTokenInput = document.createElement('input');
+        csrfTokenInput.type = 'hidden';
+        csrfTokenInput.name = '_token';
+        csrfTokenInput.value = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        form.appendChild(csrfTokenInput);
 
-    // Crear input oculto para reCAPTCHA Token
-    const recaptchaTokenInput = document.createElement('input');
-    recaptchaTokenInput.type = 'hidden';
-    recaptchaTokenInput.name = 'recaptcha_token';
-    recaptchaTokenInput.id = 'recaptcha_token';
-    form.appendChild(recaptchaTokenInput);
+        // Crear input oculto para reCAPTCHA Token con ID único
+        const recaptchaTokenInput = document.createElement('input');
+        recaptchaTokenInput.type = 'hidden';
+        recaptchaTokenInput.name = 'recaptcha_token';
+        recaptchaTokenInput.id = 'recaptcha_token_' + index + '_' + Date.now();
+        form.appendChild(recaptchaTokenInput);
 
-    // Captura submit y genera token reCAPTCHA
-    form.addEventListener('submit', function(e) {
-        e.preventDefault(); // Evita envío inmediato
-        grecaptcha.ready(function() {
-            grecaptcha.execute('{{ $recaptcha->site_key }}', {action: 'submit'}).then(function(token) {
-                document.getElementById('recaptcha_token').value = token;
-                form.submit(); // Envía el formulario después de insertar el token
+        // Generar token reCAPTCHA al enviar el formulario
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+           
+            if (typeof grecaptcha === 'undefined') {
+                console.error('reCAPTCHA no está cargado');
+                return;
+            }
+           
+            grecaptcha.ready(function() {
+                grecaptcha.execute('{{ $recaptcha->site_key }}', {action: 'submit'}).then(function(token) {
+                    document.getElementById(recaptchaTokenInput.id).value = token;
+                    form.submit();
+                }).catch(function(error) {
+                    console.error('Error con reCAPTCHA en formulario ' + index + ':', error);
+                });
             });
         });
     });
 });
 </script>
-
 
 <script>
     // 🔥 Redirigir a /hola SOLO si está en modo PWA instalada

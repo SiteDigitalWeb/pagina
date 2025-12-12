@@ -259,10 +259,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         return view('admin.dashboard');
     })->name('dashboard');
     
-    // Rutas del PWA Manifest - USANDO PARÁMETRO EXPLÍCITO
-    Route::resource('pwa', Sitedigitalweb\Pagina\Http\PwaManifestController::class)->except(['show'])->parameters([
-        'pwa' => 'pwaManifest'  // Mapear 'pwa' a 'pwaManifest'
-    ]);
+  Route::resource('pwa', Sitedigitalweb\Pagina\Http\PwaManifestController::class)
+        ->except(['show'])
+        ->parameters([
+            'pwa' => 'pwaManifest'
+        ]);    
     
     // Ruta para activar/desactivar manifest
     Route::patch('/pwa/{pwaManifest}/toggle', [Sitedigitalweb\Pagina\Http\PwaManifestController::class, 'toggle'])
