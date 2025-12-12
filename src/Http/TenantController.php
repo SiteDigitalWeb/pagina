@@ -198,7 +198,7 @@ public function store(Request $request)
     ]);
 
     // Definir valores reutilizables
-    $phpFpmSocket = 'unix:/run/php/php8.3-fpm.sock';
+    $phpFpmSocket = 'unix:/run/php/php8.4-fpm.sock';
     $certPath = "/etc/letsencrypt/live/{$domain}";
 
     try {
