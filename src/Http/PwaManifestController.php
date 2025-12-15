@@ -11,6 +11,17 @@ use App\Http\Controllers\Controller;
 class PwaManifestController extends Controller
 {
 
+  private function resolveUserModel()
+    {
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    return $website 
+        ? \Sitedigitalweb\Pagina\Tenant\PwaManifest::class
+        : \Sitedigitalweb\Pagina\PwaManifest::class;
+    }
+
+
+
     private function getPwaModel()
 {
     $website = app(\Hyn\Tenancy\Environment::class)->website();
@@ -221,13 +232,15 @@ private function processIcons($iconInputs)
     }
 
 
-    public function manifest()
+public function manifest()
 {
-    // Usa el namespace completo o importa la clase
-    $manifest = PwaManifest::getActive();
-    
+    // Usa el modelo del tenant correctamente
+    $model = $this->resolveUserModel();
+    $manifest = $model::getActive();  // Asegúrate que este método esté bien definido
+
+    // Si no existe el manifiesto, lo creamos
     if (!$manifest) {
-        $manifest = PwaManifest::create([
+        $manifest = $model::create([
             'name' => 'SiteCMS',
             'short_name' => 'SiteCMS',
             'description' => 'Sistema de gestión de contenidos PWA',
@@ -243,10 +256,32 @@ private function processIcons($iconInputs)
         ]);
     }
 
-    return response()->json($manifest->toManifestArray())
-        ->header('Content-Type', 'application/json')
-        ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    // Devolvemos el manifiesto como un array
+    return response()->json([
+        'name' => $manifest->name,
+        'short_name' => $manifest->short_name,
+        'description' => $manifest->description,
+        'start_url' => $manifest->start_url,
+        'display' => $manifest->display,
+        'background_color' => $manifest->background_color,
+        'theme_color' => $manifest->theme_color,
+        'orientation' => $manifest->orientation,
+        'scope' => $manifest->scope,
+        'lang' => $manifest->lang,
+        'dir' => $manifest->dir,
+        'icons' => json_decode($manifest->icons), // Asegúrate de que los iconos estén en formato JSON correctamente
+        'screenshots' => $manifest->screenshots ?? null,
+        'shortcuts' => $manifest->shortcuts ?? null,
+        'categories' => json_decode($manifest->categories) ?? null,
+        'edge_side_panel' => $manifest->edge_side_panel ?? null,
+        'launch_handler' => $manifest->launch_handler ?? null,
+        'handle_links' => $manifest->handle_links ?? 'preferred',
+        'protocol_handlers' => $manifest->protocol_handlers ?? null
+    ])
+    ->header('Content-Type', 'application/json')
+    ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
 }
+
 
     
 }
