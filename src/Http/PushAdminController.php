@@ -17,24 +17,24 @@ class PushAdminController extends Controller
 {
 
 
-private function resolveVapid()
+private function resolveVapid(): array
 {
     $website = app(Environment::class)->website();
 
     if (!$website) {
-        throw new \Exception('❌ No hay tenant activo');
+        throw new \Exception('No hay tenant activo para VAPID');
     }
 
-    $vapid = VapidKey::where('website_id', $website->uuid)->first();
+    $vapid = VapidKey::where('website_id', $website->id)->first();
 
     if (!$vapid) {
-        throw new \Exception('❌ Este tenant no tiene claves VAPID');
+        throw new \Exception('El tenant no tiene claves VAPID');
     }
 
     return [
-        'subject'    => $vapid->subject ?? 'mailto:admin@tuapp.com',
         'publicKey'  => $vapid->public_key,
         'privateKey' => $vapid->private_key,
+        'subject'    => $vapid->subject ?? 'mailto:admin@tudominio.com',
     ];
 }
 
