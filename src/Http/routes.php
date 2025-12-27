@@ -346,7 +346,15 @@ Route::get('gestion/municipios/{id}', 'DigitalsiteSaaS\Pagina\Http\Configuracion
 
 
 
+Route::prefix('api')->group(function () {
 
+  
+
+    Route::post('/push/subscribe', [Sitedigitalweb\Pagina\Http\PushSubscriptionController::class, 'subscribe']);
+Route::post('/push/unsubscribe', [Sitedigitalweb\Pagina\Http\PushSubscriptionController::class, 'unsubscribe']);
+Route::post('/push/send', [Sitedigitalweb\Pagina\Http\PushNotificationController::class, 'send']);
+
+});
 
 
 
