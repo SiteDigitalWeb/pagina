@@ -9,10 +9,34 @@ use Minishlink\WebPush\WebPush;
 use Minishlink\WebPush\Subscription;
 use App\Models\User;
 use App\Models\Notification;
+use App\Models\VapidKey;
+use Hyn\Tenancy\Environment;
 
 
 class PushAdminController extends Controller
 {
+
+
+private function resolveVapid()
+{
+    $website = app(Environment::class)->website();
+
+    if (!$website) {
+        throw new \Exception('❌ No hay tenant activo');
+    }
+
+    $vapid = VapidKey::where('website_id', $website->uuid)->first();
+
+    if (!$vapid) {
+        throw new \Exception('❌ Este tenant no tiene claves VAPID');
+    }
+
+    return [
+        'subject'    => $vapid->subject ?? 'mailto:admin@tuapp.com',
+        'publicKey'  => $vapid->public_key,
+        'privateKey' => $vapid->private_key,
+    ];
+}
 
 
  private function resolveUserModel()
@@ -72,14 +96,15 @@ public function send(Request $request)
 
     $subscriptions = $subscriptions->get();
 
-    // 2️⃣ Enviar push
-    $webPush = new WebPush([
-        'VAPID' => [
-            'subject' => config('push.subject'),
-            'publicKey' => config('push.vapid_public_key'),
-            'privateKey' => config('push.vapid_private_key'),
-        ],
-    ]);
+    $vapid = $this->resolveVapid();
+
+$webPush = new WebPush([
+    'VAPID' => [
+        'subject'    => $vapid['subject'],
+        'publicKey'  => $vapid['publicKey'],
+        'privateKey' => $vapid['privateKey'],
+    ],
+]);
 
     $payload = json_encode([
         'title' => $request->title,
