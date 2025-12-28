@@ -5,6 +5,7 @@ namespace Sitedigitalweb\Pagina\Http;
 use Sitedigitalweb\Pagina\PwaManifest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Models\VapidKey;
 
 use App\Http\Controllers\Controller;
 
