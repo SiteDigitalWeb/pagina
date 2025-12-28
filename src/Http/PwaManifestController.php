@@ -36,19 +36,16 @@ class PwaManifestController extends Controller
 }
   public function index()
 {
-    $env = app(\Hyn\Tenancy\Environment::class);
-    $website = $env->website();
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
 
     if ($website) {
         $vapid = VapidKey::where('website_id', $website->id)->firstOrFail();
-        $publicKey = $vapid->public_key;
     } else {
-        // dominio raíz
-        $publicKey = config('push.vapid_public_key');
+        $vapid = VapidKey::whereNull('website_id')->firstOrFail();
     }
 
     return view('pwa.home', [
-        'vapidPublicKey' => $publicKey,
+        'vapidPublicKey' => $vapid->public_key,
     ]);
 }
 

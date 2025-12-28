@@ -19,29 +19,19 @@ class PushAdminController extends Controller
 
 private function resolveVapid(): array
 {
-    $env = app(Environment::class);
-    $website = $env->website();
+    $website = app(Environment::class)->website();
 
-    // 🔵 CASO ROOT (sitekonecta.com)
-    if (!$website) {
+    // 🎯 TENANT
+    if ($website) {
+        $vapid = VapidKey::where('website_id', $website->id)->first();
+    }
+    // 🌍 ROOT (dominio principal)
+    else {
         $vapid = VapidKey::whereNull('website_id')->first();
-
-        if (!$vapid) {
-            throw new \Exception('No hay VAPID global configurado');
-        }
-
-        return [
-            'publicKey'  => $vapid->public_key,
-            'privateKey' => $vapid->private_key,
-            'subject'    => $vapid->subject ?? 'mailto:admin@sitekonecta.com',
-        ];
     }
 
-    // 🟢 CASO TENANT
-    $vapid = VapidKey::where('website_id', $website->id)->first();
-
     if (!$vapid) {
-        throw new \Exception('El tenant no tiene claves VAPID');
+        throw new \Exception('No hay VAPID configurado para este contexto');
     }
 
     return [
