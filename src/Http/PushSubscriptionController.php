@@ -3,7 +3,6 @@
 namespace Sitedigitalweb\Pagina\Http;
 
 use App\Http\Controllers\Controller;
-use App\Models\PushSubscription;
 use Illuminate\Http\Request;
 
 class PushSubscriptionController extends Controller
