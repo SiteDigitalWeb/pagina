@@ -34,19 +34,27 @@ class PwaManifestController extends Controller
         return \Sitedigitalweb\Pagina\PwaManifest::class;
     }
 }
-    public function index(){
-    
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
+  public function index()
+{
+    $env = app(\Hyn\Tenancy\Environment::class);
+    $website = $env->website();
 
-    // Si estamos en tenant, simplemente usamos la base del tenant
     if ($website) {
-         $manifests = \Sitedigitalweb\Pagina\Tenant\PwaManifest::all();
+        $vapid = VapidKey::where('website_id', $website->id)->firstOrFail();
+        $publicKey = $vapid->public_key;
     } else {
-        // En la base central, también usamos sin filtro
-        $manifests = PwaManifest::all();
+        // dominio raíz
+        $publicKey = config('push.vapid_public_key');
     }
-        return view('admin.pwa.index', compact('manifests'));
-    }
+
+    return view('pwa.home', [
+        'vapidPublicKey' => $publicKey,
+    ]);
+}
+
+
+
+
 
     public function create()
     {
