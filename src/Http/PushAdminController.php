@@ -21,23 +21,30 @@ private function resolveVapid(): array
 {
     $website = app(Environment::class)->website();
 
-    // 🎯 TENANT
+    // 🏢 CONTEXTO TENANT
     if ($website) {
         $vapid = VapidKey::where('website_id', $website->id)->first();
-    }
-    // 🌍 ROOT (dominio principal)
-    else {
-        $vapid = VapidKey::whereNull('website_id')->first();
+
+        if (!$vapid) {
+            throw new \Exception('El tenant no tiene VAPID configurado');
+        }
+
+        return [
+            'publicKey'  => $vapid->public_key,
+            'privateKey' => $vapid->private_key,
+            'subject'    => $vapid->subject ?? 'mailto:admin@sitekonecta.com',
+        ];
     }
 
-    if (!$vapid) {
-        throw new \Exception('No hay VAPID configurado para este contexto');
+    // 🌍 CONTEXTO ROOT (DOMINIO PRINCIPAL)
+    if (!config('push.vapid_public_key')) {
+        throw new \Exception('No hay VAPID global configurado');
     }
 
     return [
-        'publicKey'  => $vapid->public_key,
-        'privateKey' => $vapid->private_key,
-        'subject'    => $vapid->subject ?? 'mailto:admin@sitekonecta.com',
+        'publicKey'  => config('push.vapid_public_key'),
+        'privateKey' => config('push.vapid_private_key'),
+        'subject'    => config('push.subject'),
     ];
 }
 

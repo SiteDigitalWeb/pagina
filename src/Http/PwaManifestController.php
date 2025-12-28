@@ -34,20 +34,24 @@ class PwaManifestController extends Controller
         return \Sitedigitalweb\Pagina\PwaManifest::class;
     }
 }
-  public function index()
+public function index()
 {
     $website = app(\Hyn\Tenancy\Environment::class)->website();
 
     if ($website) {
         $vapid = VapidKey::where('website_id', $website->id)->firstOrFail();
+        $publicKey = $vapid->public_key;
     } else {
-        $vapid = VapidKey::whereNull('website_id')->firstOrFail();
+        $publicKey = config('push.vapid_public_key');
+
+        if (!$publicKey) {
+            abort(500, 'No hay VAPID global configurado');
+        }
     }
 
-    return view('pwa.home', [
-        'vapidPublicKey' => $vapid->public_key,
-    ]);
+    return view('pwa.home', compact('publicKey'));
 }
+
 
 
 
