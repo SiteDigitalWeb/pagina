@@ -1,6 +1,7 @@
 <?php
 
 namespace Sitedigitalweb\Pagina;
+use App\Models\User;
 
 use Illuminate\Database\Eloquent\Model;
 

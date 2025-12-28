@@ -4,6 +4,7 @@ namespace Sitedigitalweb\Pagina\Tenant;
 
 use Hyn\Tenancy\Traits\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 
 class PushSubscription extends Model
 {
