@@ -1,6 +1,6 @@
 <?php
 
-namespace Sitedigitalweb\Pagina;
+namespace Sitedigitalweb\Pagina\Tenant;
 use Illuminate\Database\Eloquent\Model;
 use Hyn\Tenancy\Traits\UsesTenantConnection;
 
