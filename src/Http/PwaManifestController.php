@@ -5,7 +5,6 @@ namespace Sitedigitalweb\Pagina\Http;
 use Sitedigitalweb\Pagina\PwaManifest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Models\VapidKey;
 
 use App\Http\Controllers\Controller;
 
@@ -35,28 +34,19 @@ class PwaManifestController extends Controller
         return \Sitedigitalweb\Pagina\PwaManifest::class;
     }
 }
-public function index()
-{
+    public function index(){
+    
     $website = app(\Hyn\Tenancy\Environment::class)->website();
 
+    // Si estamos en tenant, simplemente usamos la base del tenant
     if ($website) {
-        $vapid = VapidKey::where('website_id', $website->id)->firstOrFail();
-        $publicKey = $vapid->public_key;
+         $manifests = \Sitedigitalweb\Pagina\Tenant\PwaManifest::all();
     } else {
-        $publicKey = config('push.vapid_public_key');
-
-        if (!$publicKey) {
-            abort(500, 'No hay VAPID global configurado');
-        }
+        // En la base central, también usamos sin filtro
+        $manifests = PwaManifest::all();
     }
-
-    return view('pwa.home', compact('publicKey'));
-}
-
-
-
-
-
+        return view('admin.pwa.index', compact('manifests'));
+    }
 
     public function create()
     {
@@ -295,3 +285,8 @@ public function manifest()
 
     
 }
+
+
+
+
+

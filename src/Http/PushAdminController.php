@@ -59,6 +59,15 @@ private function resolveVapid(): array
         : \Sitedigitalweb\Pagina\PushSubscription::class;
     }
 
+     private function resolveNotificationModel()
+    {
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    return $website 
+        ? \Sitedigitalweb\Pagina\Tenant\PushNotification::class
+        : \Sitedigitalweb\Pagina\PushNotification::class;
+    }
+
 
 
    public function index()
@@ -92,7 +101,7 @@ public function send(Request $request)
         $subscriptions->whereHas('user', function ($q) use ($request) {
 
             if ($request->filled('rol_id')) {
-                $q->where('rol_id', $request->role);
+                $q->where('rol_id', $request->rol_id);
             }
 
             if ($request->filled('city')) {
@@ -108,6 +117,16 @@ public function send(Request $request)
     $subscriptions = $subscriptions->get();
 
     $vapid = $this->resolveVapid();
+
+    $notificationModel = $this->resolveNotificationModel();
+
+$notification = $notificationModel::create([
+    'title' => $request->title,
+    'body'  => $request->body,
+    'url'   => $request->url ?? '/',
+    'total' => $subscriptions->count(),
+]);
+
 
 $webPush = new WebPush([
     'VAPID' => [
@@ -135,13 +154,34 @@ $webPush = new WebPush([
     }
 
     // 3️⃣ Limpieza automática
-    foreach ($webPush->flush() as $report) {
-        if (!$report->isSuccess()) {
-            $model::where('endpoint', $report->getEndpoint())->delete();
-        }
+    $sent = 0;
+$failed = 0;
+
+foreach ($webPush->flush() as $report) {
+
+    $success = $report->isSuccess();
+
+    $notification->logs()->create([
+        'endpoint' => $report->getEndpoint(),
+        'success'  => $success,
+        'error'    => $success ? null : $report->getReason(),
+    ]);
+
+    if ($success) {
+        $sent++;
+    } else {
+        $failed++;
+        $model::where('endpoint', $report->getEndpoint())->delete();
     }
+}
+    $notification->update([
+    'sent'   => $sent,
+    'failed' => $failed,
+]);
 
     return back()->with('success', 'Notificación enviada');
+
+
 }
 
 function getSubscriptionsByTarget(array $target)
@@ -179,8 +219,9 @@ function getSubscriptionsByTarget(array $target)
 
 public function history()
 {
+    $model = $this->resolveNotificationModel();
     return view('admin.push.history', [
-        'notifications' => PushNotification::latest()->paginate(20)
+        'notifications' => $model::latest()->paginate(20)
     ]);
 }
 
