@@ -234,16 +234,99 @@ private function processIcons($iconInputs)
 
 public function manifest()
 {
-    // Usa el modelo del tenant correctamente
+    // Resolver tenant dinámicamente
     $model = $this->resolveUserModel();
-    $manifest = $model::getActive();  // Asegúrate que este método esté bien definido
+    $manifest = $model::getActive();
 
-    // Si no existe el manifiesto, lo creamos
+    /*
+     |--------------------------------------------------------------------------
+     | Datos dinámicos por tenant
+     |--------------------------------------------------------------------------
+     */
+    $tenantSlug = request()->getHost(); 
+    // o: auth()->user()->tenant_id
+    // o: tenant()->id
+    // ajusta esta línea a tu sistema real
+    $website = app(\Hyn\Tenancy\Environment::class)->website();
+
+    if (empty($website->uuid)) {
+    $baseIconPath = '/icons';
+    } else {
+    $baseIconPath = "/saas/{$website->uuid}/icons";
+    }
+    $defaultIcons = [
+        [
+            'src' => "{$baseIconPath}/icon-72x72.png",
+            'sizes' => '72x72',
+            'type' => 'image/png',
+            'purpose' => 'any'
+        ],
+        [
+            'src' => "{$baseIconPath}/icon-96x96.png",
+            'sizes' => '96x96',
+            'type' => 'image/png',
+            'purpose' => 'any maskable'
+        ],
+        [
+            'src' => "{$baseIconPath}/icon-128x128.png",
+            'sizes' => '128x128',
+            'type' => 'image/png',
+            'purpose' => 'any maskable'
+        ],
+        [
+            'src' => "{$baseIconPath}/icon-144x144.png",
+            'sizes' => '144x144',
+            'type' => 'image/png',
+            'purpose' => 'any'
+        ],
+        [
+            'src' => "{$baseIconPath}/icon-152x152.png",
+            'sizes' => '152x152',
+            'type' => 'image/png',
+            'purpose' => 'any'
+        ],
+        [
+            'src' => "{$baseIconPath}/icon-180x180.png",
+            'sizes' => '180x180',
+            'type' => 'image/png',
+            'purpose' => 'any'
+        ],
+        [
+            'src' => "{$baseIconPath}/icon-192x192.png",
+            'sizes' => '192x192',
+            'type' => 'image/png',
+            'purpose' => 'any maskable'
+        ],
+        [
+            'src' => "{$baseIconPath}/icon-256x256.png",
+            'sizes' => '256x256',
+            'type' => 'image/png',
+            'purpose' => 'any'
+        ],
+        [
+            'src' => "{$baseIconPath}/icon-384x384.png",
+            'sizes' => '384x384',
+            'type' => 'image/png',
+            'purpose' => 'any'
+        ],
+        [
+            'src' => "{$baseIconPath}/icon-512x512.png",
+            'sizes' => '512x512',
+            'type' => 'image/png',
+            'purpose' => 'any maskable'
+        ]
+    ];
+
+    /*
+     |--------------------------------------------------------------------------
+     | Crear manifest si no existe (por tenant)
+     |--------------------------------------------------------------------------
+     */
     if (!$manifest) {
         $manifest = $model::create([
-            'name' => 'SiteCMS',
-            'short_name' => 'SiteCMS',
-            'description' => 'Sistema de gestión de contenidos PWA',
+            'name' => config('app.name'),
+            'short_name' => config('app.name'),
+            'description' => 'Aplicación PWA',
             'start_url' => '/',
             'display' => 'standalone',
             'background_color' => '#ffffff',
@@ -252,11 +335,31 @@ public function manifest()
             'scope' => '/',
             'lang' => 'es',
             'dir' => 'ltr',
-            'enabled' => true
+            'enabled' => true,
+            'icons' => json_encode($defaultIcons),
+            'categories' => json_encode(['business', 'productivity']),
+            'handle_links' => 'preferred'
         ]);
     }
 
-    // Devolvemos el manifiesto como un array
+    /*
+     |--------------------------------------------------------------------------
+     | Decodificación segura
+     |--------------------------------------------------------------------------
+     */
+    $icons = is_string($manifest->icons)
+        ? json_decode($manifest->icons, true)
+        : $manifest->icons;
+
+    $categories = is_string($manifest->categories)
+        ? json_decode($manifest->categories, true)
+        : $manifest->categories;
+
+    /*
+     |--------------------------------------------------------------------------
+     | Respuesta final
+     |--------------------------------------------------------------------------
+     */
     return response()->json([
         'name' => $manifest->name,
         'short_name' => $manifest->short_name,
@@ -269,18 +372,23 @@ public function manifest()
         'scope' => $manifest->scope,
         'lang' => $manifest->lang,
         'dir' => $manifest->dir,
-        'icons' => json_decode($manifest->icons), // Asegúrate de que los iconos estén en formato JSON correctamente
-        'screenshots' => $manifest->screenshots ?? null,
-        'shortcuts' => $manifest->shortcuts ?? null,
-        'categories' => json_decode($manifest->categories) ?? null,
-        'edge_side_panel' => $manifest->edge_side_panel ?? null,
-        'launch_handler' => $manifest->launch_handler ?? null,
-        'handle_links' => $manifest->handle_links ?? 'preferred',
-        'protocol_handlers' => $manifest->protocol_handlers ?? null
+
+        // Siempre iconos correctos por tenant
+        'icons' =>  $defaultIcons,
+
+        'categories' => $categories ?: ['business', 'productivity'],
+        'screenshots' => null,
+        'shortcuts' => null,
+        'handle_links' => $manifest->handle_links ?? 'preferred'
     ])
-    ->header('Content-Type', 'application/json')
+    ->header('Content-Type', 'application/manifest+json')
     ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
 }
+
+ 
+
+
+
 
 
     

@@ -250,30 +250,26 @@ Route::post('/push-subscribe', function (Illuminate\Http\Request $request) {
 Route::get('/manifest.json', [Sitedigitalweb\Pagina\Http\PwaManifestController::class, 'manifest'])->name('manifest.json');
 
 
-
-// Rutas de administración
 Route::prefix('admin')->name('admin.')->group(function () {
+ Route::get('/dashboard', function () {
+ return view('admin.dashboard');
+ })->name('dashboard');
     
-    // Dashboard
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+ Route::resource('pwa', Sitedigitalweb\Pagina\Http\PwaManifestController::class)
+  ->except(['show'])
+  ->parameters([
+  'pwa' => 'pwaManifest'
+ ]);    
     
-  Route::resource('pwa', Sitedigitalweb\Pagina\Http\PwaManifestController::class)
-        ->except(['show'])
-        ->parameters([
-            'pwa' => 'pwaManifest'
-        ]);    
-    
-    // Ruta para activar/desactivar manifest
-    Route::patch('/pwa/{pwaManifest}/toggle', [Sitedigitalweb\Pagina\Http\PwaManifestController::class, 'toggle'])
-        ->name('pwa.toggle');
-});
+ Route::patch('/pwa/{pwaManifest}/toggle', [Sitedigitalweb\Pagina\Http\PwaManifestController::class, 'toggle'])
+  ->name('pwa.toggle');
+ });
+
+
+
 
 
 Route::group(['middleware' => ['auth','administrador']], function (){
-
-
 Route::get('/gestor/ver-config/publico', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@publico');
 Route::get('/gestor/ver-config/privado', 'DigitalsiteSaaS\Pagina\Http\ConfiguracionController@privado');
 Route::get('/gestor/planes-saas', 'DigitalsiteSaaS\Pagina\Http\SuscripcionController@planessaas');
@@ -353,8 +349,12 @@ Route::middleware(['web'])->group(function () {
 
 
 
-Route::prefix('api')->group(function () {
+Route::middleware('auth:api')->prefix('api')->group(function () {
 Route::post('/push/subscribe', [Sitedigitalweb\Pagina\Http\PushSubscriptionController::class, 'subscribe']);
+
+});
+
+Route::prefix('api')->group(function () {
 Route::post('/push/unsubscribe', [Sitedigitalweb\Pagina\Http\PushSubscriptionController::class, 'unsubscribe']);
 Route::post('/push/send', [Sitedigitalweb\Pagina\Http\PushNotificationController::class, 'send']);
 

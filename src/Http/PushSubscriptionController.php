@@ -21,7 +21,7 @@ class PushSubscriptionController extends Controller
     public function subscribe(Request $request)
     {
         $model = $this->resolveUserModel();
-        $user = auth()->user();
+        $user = auth('api')->user(); // 👈 MUY IMPORTANTE
 
         $request->validate([
             'endpoint' => 'required|string',
