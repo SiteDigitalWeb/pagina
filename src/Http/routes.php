@@ -193,13 +193,6 @@ Route::get('gestion/municipios/{id}', 'DigitalsiteSaaS\Pagina\Http\Configuracion
 
 
 
-Route::middleware(['web'])->group(function () {
-    Route::get('/admin/push', [Sitedigitalweb\Pagina\Http\PushAdminController::class, 'index']);
-    Route::get('/admin/history', [Sitedigitalweb\Pagina\Http\PushAdminController::class, 'history']);
- 
-});
-
-
 
 Route::middleware('auth:api')->prefix('api')->group(function () {
 Route::post('/push/subscribe', [Sitedigitalweb\Pagina\Http\PushSubscriptionController::class, 'subscribe']);
