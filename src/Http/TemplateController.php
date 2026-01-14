@@ -339,14 +339,44 @@ private function renderComponent($component)
         return $component['content'] ?? '';
     }
 
+    // DEBUG: Registrar componente actual
+    error_log('Renderizando componente tipo: ' . ($component['type'] ?? 'desconocido') . 
+              ', tag: ' . ($component['tagName'] ?? 'N/A'));
+
     // Manejo específico para el brand-logo-slider
     if (($component['type'] ?? '') === 'brand-logo-slider') {
         return $this->renderBrandLogoSlider($component);
     }
 
-    // Manejo específico para el css-slider (nuevo componente)
+    // Manejo específico para el css-slider (CRÍTICO - PRIMERO VERIFICAR)
     if (($component['type'] ?? '') === 'css-slider') {
-        return $this->renderCssSlider($component);
+        error_log('=== INICIANDO RENDER CSS-SLIDER ===');
+        error_log('Componente keys disponibles: ' . implode(', ', array_keys($component)));
+        
+        // DEBUG más detallado
+        if (isset($component['components'])) {
+            error_log('Número de componentes hijos: ' . count($component['components']));
+            if (count($component['components']) > 0) {
+                error_log('Primer componente hijo type: ' . ($component['components'][0]['type'] ?? 'N/A'));
+                error_log('Primer componente hijo content length: ' . 
+                         (isset($component['components'][0]['content']) ? 
+                          strlen($component['components'][0]['content']) : 'N/A'));
+            }
+        }
+        
+        if (isset($component['content'])) {
+            error_log('Content length: ' . strlen($component['content']));
+            error_log('Primeros 500 chars de content: ' . substr($component['content'], 0, 500));
+        }
+        
+        if (isset($component['slidesData'])) {
+            error_log('slidesData presente, length: ' . strlen($component['slidesData']));
+            error_log('slidesData preview: ' . substr($component['slidesData'], 0, 200));
+        }
+        
+        $result = $this->renderCssSlider($component);
+        error_log('=== FINALIZANDO RENDER CSS-SLIDER ===');
+        return $result;
     }
 
     // Parámetros básicos
@@ -354,6 +384,11 @@ private function renderComponent($component)
     $content = $component['content'] ?? '';
     $attributes = $component['attributes'] ?? [];
     $components = $component['components'] ?? [];
+
+    // DEBUG: Para componentes con muchos hijos
+    if (count($components) > 10) {
+        error_log("Componente $tag tiene " . count($components) . " hijos");
+    }
 
     // Manejo específico para iframes (ej: Google Maps)
     if (
@@ -432,6 +467,11 @@ private function renderComponent($component)
     $innerHtml = $content;
     if (!empty($components) && !$isImage) {
         foreach ($components as $child) {
+            // DEBUG: Verificar cada hijo
+            if (($child['type'] ?? '') === 'comment') {
+                continue;
+            }
+            
             if (in_array($child['type'] ?? '', [
                 'text-input', 'email-input', 'textarea-input',
                 'select-input', 'number-input', 'submit-button', 'date-input'
@@ -443,6 +483,7 @@ private function renderComponent($component)
         }
     }
 
+    // Manejo específico para dynamic-form
     if (($component['type'] ?? '') === 'dynamic-form') {
         $tag = 'form';
 
@@ -483,60 +524,133 @@ private function renderComponent($component)
  */
 private function renderCssSlider($component)
 {
-    $attributes = $component['attributes'] ?? [];
-    $components = $component['components'] ?? [];
+    error_log('=== RENDER CSS SLIDER V2 ===');
     
-    // Obtener datos de los slides desde las propiedades del componente
-    $slidesData = [];
-    if (isset($component['slidesData']) && is_string($component['slidesData'])) {
-        try {
-            $slidesData = json_decode($component['slidesData'], true);
-        } catch (\Exception $e) {
-            // En caso de error, usar datos por defecto
-            $slidesData = [
-                [
-                    'id' => 'slide1',
-                    'image' => 'https://picsum.photos/id/1005/1920/1080',
-                    'video' => '',
-                    'title' => 'Bienvenido a nuestro mundo visual',
-                    'description' => 'Inspiración, creatividad y tecnología al servicio de tu marca.',
-                    'buttonText' => 'Explorar más',
-                    'buttonLink' => '#',
-                    'mediaType' => 'image',
-                    'videoAutoplay' => true,
-                    'videoMuted' => true,
-                    'videoLoop' => true
-                ]
-            ];
+    // PRIMERO: Intentar usar los componentes hijos si existen
+    if (isset($component['components']) && is_array($component['components']) && !empty($component['components'])) {
+        error_log('Usando componentes hijos (' . count($component['components']) . ' encontrados)');
+        
+        $html = '';
+        foreach ($component['components'] as $child) {
+            $rendered = $this->renderComponent($child);
+            error_log('Componente hijo renderizado, length: ' . strlen($rendered));
+            $html .= $rendered;
+        }
+        
+        // Asegurar que el contenedor principal tenga la clase slider
+        if (str_contains($html, 'class="slider"')) {
+            error_log('HTML ya contiene clase slider');
+            return $html;
+        } else {
+            // Envolver en div con clase slider
+            $attributes = $component['attributes'] ?? [];
+            $attributes['class'] = isset($attributes['class']) 
+                ? $attributes['class'] . ' slider' 
+                : 'slider';
+            $attributes['data-animation'] = $component['animation'] ?? 'slide';
+            $attributes['data-timing'] = $component['slideTiming'] ?? '5000';
+            
+            $attrString = $this->buildAttributesString($attributes);
+            error_log('Envolviendo en div con atributos: ' . $attrString);
+            
+            return '<div ' . $attrString . '>' . $html . '</div>';
         }
     }
-
-    // Obtener configuración del slider
+    
+    // SEGUNDO: Intentar usar el contenido directo
+    if (isset($component['content']) && !empty($component['content']) && 
+        !str_contains($component['content'], '<div class="slides"></div>')) {
+        error_log('Usando contenido directo, length: ' . strlen($component['content']));
+        
+        $attributes = $component['attributes'] ?? [];
+        $attributes['class'] = isset($attributes['class']) 
+            ? $attributes['class'] . ' slider' 
+            : 'slider';
+        $attributes['data-animation'] = $component['animation'] ?? 'slide';
+        $attributes['data-timing'] = $component['slideTiming'] ?? '5000';
+        
+        $attrString = $this->buildAttributesString($attributes);
+        
+        return '<div ' . $attrString . '>' . $component['content'] . '</div>';
+    }
+    
+    error_log('Fallback a reconstrucción desde slidesData');
+    
+    // TERCERO: Fallback - reconstruir desde slidesData
+    $slidesData = [];
+    if (isset($component['slidesData']) && is_string($component['slidesData']) && 
+        !empty($component['slidesData'])) {
+        try {
+            $decoded = json_decode($component['slidesData'], true, 512, JSON_THROW_ON_ERROR);
+            if (is_array($decoded) && !empty($decoded)) {
+                $slidesData = $decoded;
+                error_log('slidesData decodificado con ' . count($slidesData) . ' slides');
+            } else {
+                error_log('slidesData decodificado pero vacío o no array');
+            }
+        } catch (\Exception $e) {
+            error_log('Error decodificando slidesData: ' . $e->getMessage());
+        }
+    }
+    
+    // Si aún no hay slidesData, usar defaults
+    if (empty($slidesData)) {
+        error_log('Usando slides por defecto');
+        $slidesData = [
+            [
+                'id' => 'slide1',
+                'image' => 'https://picsum.photos/id/1005/1920/1080',
+                'video' => '',
+                'title' => 'Bienvenido a nuestro mundo visual',
+                'description' => 'Inspiración, creatividad y tecnología al servicio de tu marca.',
+                'buttonText' => 'Explorar más',
+                'buttonLink' => '#',
+                'mediaType' => 'image',
+                'videoAutoplay' => true,
+                'videoMuted' => true,
+                'videoLoop' => true
+            ]
+        ];
+    }
+    
     $animation = $component['animation'] ?? 'slide';
     $slideTiming = $component['slideTiming'] ?? '5000';
-    $contentEnabled = $component['contentEnabled'] ?? true;
-
-    // Construir atributos del slider principal
+    $contentEnabled = isset($component['contentEnabled']) ? (bool)$component['contentEnabled'] : true;
+    
+    // Construir atributos
+    $attributes = $component['attributes'] ?? [];
     $attributes['class'] = isset($attributes['class']) 
         ? $attributes['class'] . ' slider' 
         : 'slider';
     $attributes['data-animation'] = $animation;
     $attributes['data-timing'] = $slideTiming;
     $attributes['data-content-enabled'] = $contentEnabled ? 'true' : 'false';
-
+    
     $attrString = $this->buildAttributesString($attributes);
-
+    
     // Generar HTML de los slides
     $slidesHtml = '<div class="slides">';
     
     foreach ($slidesData as $index => $slide) {
-        // Asegurar que todos los campos tengan valores por defecto
-        $slide = $this->ensureSlideDefaults($slide);
+        // Asegurar valores por defecto
+        $slide = array_merge([
+            'id' => 'slide' . ($index + 1),
+            'image' => 'https://picsum.photos/id/' . (1000 + $index) . '/1920/1080',
+            'video' => '',
+            'title' => 'Slide ' . ($index + 1),
+            'description' => '',
+            'buttonText' => 'Ver más',
+            'buttonLink' => '#',
+            'mediaType' => 'image',
+            'videoAutoplay' => true,
+            'videoMuted' => true,
+            'videoLoop' => true
+        ], $slide);
         
         $isActive = $index === 0;
-        $slideClass = $isActive ? 'slide active' : 'slide';
+        $slideClass = 'slide' . ($isActive ? ' active' : '');
         
-        // Determinar el estilo según la animación
+        // Determinar estilo según animación
         $slideStyle = '';
         if ($animation !== 'slide') {
             $slideStyle = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: ' . 
@@ -544,47 +658,29 @@ private function renderCssSlider($component)
         } else {
             $slideStyle = 'position: relative; opacity: 1;';
         }
-
+        
         // Contenido multimedia
         $mediaContent = '';
         if ($slide['mediaType'] === 'video' && !empty($slide['video'])) {
-            // Verificar si es una URL de YouTube
-            if ($this->isYouTubeUrl($slide['video'])) {
-                $youtubeEmbedUrl = $this->convertToYouTubeEmbedUrl($slide['video']);
-                $mediaContent = '
-                    <div class="video-container">
-                        <iframe 
-                            class="youtube-video"
-                            src="' . htmlspecialchars($youtubeEmbedUrl) . '"
-                            frameborder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowfullscreen
-                            loading="lazy"
-                        ></iframe>
-                        <div class="video-overlay"></div>
-                    </div>
-                ';
-            } else {
-                // Video normal (MP4, WebM, etc.)
-                $mediaContent = '
-                    <video 
-                        class="slide-video" 
-                        ' . ($slide['videoAutoplay'] ? 'autoplay' : '') . ' 
-                        ' . ($slide['videoMuted'] ? 'muted' : '') . ' 
-                        ' . ($slide['videoLoop'] ? 'loop' : '') . '
-                        playsinline
-                        preload="metadata"
-                    >
-                        <source src="' . htmlspecialchars($slide['video']) . '" type="video/mp4">
-                        Tu navegador no soporta el elemento video.
-                    </video>
-                    <div class="video-overlay"></div>
-                ';
-            }
+            $mediaContent = '
+                <video 
+                    class="slide-video" 
+                    ' . ($slide['videoAutoplay'] ? 'autoplay' : '') . ' 
+                    ' . ($slide['videoMuted'] ? 'muted' : '') . ' 
+                    ' . ($slide['videoLoop'] ? 'loop' : '') . '
+                    playsinline
+                    preload="metadata"
+                >
+                    <source src="' . htmlspecialchars($slide['video']) . '" type="video/mp4">
+                    Tu navegador no soporta videos HTML5.
+                </video>
+                <div class="video-overlay"></div>
+            ';
         } else {
-            $mediaContent = '<img src="' . htmlspecialchars($slide['image']) . '" alt="' . htmlspecialchars($slide['title']) . '" class="slide-image">';
+            $mediaContent = '<img src="' . htmlspecialchars($slide['image']) . '" alt="' . 
+                          htmlspecialchars($slide['title']) . '" class="slide-image" loading="lazy">';
         }
-
+        
         // Contenido del slide
         $slideContent = '';
         if ($contentEnabled) {
@@ -592,13 +688,15 @@ private function renderCssSlider($component)
                 <div class="slide-content">
                     <h2>' . htmlspecialchars($slide['title']) . '</h2>
                     <p>' . htmlspecialchars($slide['description']) . '</p>
-                    <a href="' . htmlspecialchars($slide['buttonLink']) . '">' . htmlspecialchars($slide['buttonText']) . '</a>
+                    <a href="' . htmlspecialchars($slide['buttonLink']) . '" class="slide-button">' . 
+                    htmlspecialchars($slide['buttonText']) . '</a>
                 </div>
             ';
         }
-
+        
         $slidesHtml .= '
-            <div class="' . $slideClass . '" data-slide-id="' . htmlspecialchars($slide['id']) . '" data-media-type="' . htmlspecialchars($slide['mediaType']) . '" style="' . $slideStyle . '">
+            <div class="' . $slideClass . '" data-slide-id="' . htmlspecialchars($slide['id']) . '" 
+                 data-media-type="' . htmlspecialchars($slide['mediaType']) . '" style="' . $slideStyle . '">
                 ' . $mediaContent . '
                 ' . $slideContent . '
             </div>
@@ -606,30 +704,141 @@ private function renderCssSlider($component)
     }
     
     $slidesHtml .= '</div>';
-
+    
     // Controles de navegación
     $controlsHtml = '
-        <button class="nav-arrow prev">❮</button>
-        <button class="nav-arrow next">❯</button>
-        <div class="dots">
+        <button class="nav-arrow prev" type="button" aria-label="Slide anterior">❮</button>
+        <button class="nav-arrow next" type="button" aria-label="Slide siguiente">❯</button>
+        <div class="dots" role="tablist">
     ';
     
     foreach ($slidesData as $index => $slide) {
-        $controlsHtml .= '<span class="dot' . ($index === 0 ? ' active' : '') . '"></span>';
+        $controlsHtml .= '<span class="dot' . ($index === 0 ? ' active' : '') . '" role="tab" 
+                          aria-label="Ir al slide ' . ($index + 1) . '" data-index="' . $index . '"></span>';
     }
     
     $controlsHtml .= '</div>';
-
-    // CSS del slider
-    $cssStyles = $this->getCssSliderStyles();
-
-    // JavaScript del slider
-    $jsScript = $this->getCssSliderScript();
-
-    // HTML completo del slider
-    $fullHtml = $cssStyles . $slidesHtml . $controlsHtml . $jsScript;
-
-    return '<div ' . $attrString . '>' . $fullHtml . '</div>';
+    
+    // CSS inline (mínimo)
+    $cssStyles = '
+    <style>
+    .slider { position: relative; width: 100%; height: 600px; overflow: hidden; }
+    .slides { display: flex; height: 100%; width: 100%; transition: transform 0.8s ease; }
+    .slide { min-width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .slide-image, .slide-video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+    .video-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); }
+    .slide-content { position: relative; z-index: 1; background: rgba(0,0,0,0.7); color: white; padding: 30px; 
+                     border-radius: 10px; max-width: 600px; text-align: center; }
+    .slide-content h2 { margin: 0 0 15px 0; font-size: 2.5em; }
+    .slide-content p { margin: 0 0 20px 0; font-size: 1.2em; }
+    .slide-button { display: inline-block; padding: 12px 30px; background: white; color: black; 
+                    text-decoration: none; border-radius: 5px; font-weight: bold; }
+    .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); 
+                 color: white; border: none; width: 50px; height: 50px; border-radius: 50%; font-size: 20px; 
+                 cursor: pointer; z-index: 10; }
+    .prev { left: 20px; } .next { right: 20px; }
+    .dots { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; z-index: 10; }
+    .dot { display: inline-block; width: 12px; height: 12px; background: rgba(255,255,255,0.5); 
+           border-radius: 50%; margin: 0 5px; cursor: pointer; }
+    .dot.active { background: white; }
+    @media (max-width: 768px) {
+        .slider { height: 400px; }
+        .slide-content { padding: 20px; margin: 0 20px; }
+        .slide-content h2 { font-size: 1.8em; }
+        .slide-content p { font-size: 1em; }
+        .nav-arrow { width: 40px; height: 40px; font-size: 16px; }
+    }
+    </style>';
+    
+    // JavaScript inline
+    $jsScript = '
+    <script>
+    (function() {
+        function initSlider(slider) {
+            const slidesContainer = slider.querySelector(".slides");
+            const slides = slider.querySelectorAll(".slide");
+            const dots = slider.querySelectorAll(".dot");
+            const prevBtn = slider.querySelector(".prev");
+            const nextBtn = slider.querySelector(".next");
+            const animation = slider.getAttribute("data-animation") || "slide";
+            const timing = parseInt(slider.getAttribute("data-timing")) || 5000;
+            
+            if (!slides.length) return;
+            
+            let currentIndex = 0;
+            let interval = null;
+            
+            function updateSlider(index) {
+                if (index < 0) index = slides.length - 1;
+                if (index >= slides.length) index = 0;
+                
+                currentIndex = index;
+                
+                if (animation === "slide") {
+                    slidesContainer.style.transform = "translateX(-" + (index * 100) + "%)";
+                } else {
+                    slides.forEach(slide => {
+                        slide.style.opacity = "0";
+                        slide.style.zIndex = "1";
+                    });
+                    slides[index].style.opacity = "1";
+                    slides[index].style.zIndex = "2";
+                }
+                
+                dots.forEach(dot => dot.classList.remove("active"));
+                if (dots[index]) dots[index].classList.add("active");
+            }
+            
+            function startAutoSlide() {
+                if (timing > 0) {
+                    stopAutoSlide();
+                    interval = setInterval(() => {
+                        updateSlider(currentIndex + 1);
+                    }, timing);
+                }
+            }
+            
+            function stopAutoSlide() {
+                if (interval) {
+                    clearInterval(interval);
+                    interval = null;
+                }
+            }
+            
+            if (prevBtn) prevBtn.addEventListener("click", () => updateSlider(currentIndex - 1));
+            if (nextBtn) nextBtn.addEventListener("click", () => updateSlider(currentIndex + 1));
+            
+            dots.forEach((dot, index) => {
+                dot.addEventListener("click", () => updateSlider(index));
+            });
+            
+            slider.addEventListener("mouseenter", stopAutoSlide);
+            slider.addEventListener("mouseleave", startAutoSlide);
+            
+            updateSlider(0);
+            startAutoSlide();
+        }
+        
+        // Inicializar cuando el DOM esté listo
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", function() {
+                document.querySelectorAll(".slider").forEach(initSlider);
+            });
+        } else {
+            document.querySelectorAll(".slider").forEach(initSlider);
+        }
+        
+        // También inicializar después de un breve delay para contenido dinámico
+        setTimeout(() => {
+            document.querySelectorAll(".slider").forEach(initSlider);
+        }, 100);
+    })();
+    </script>';
+    
+    $fullHtml = '<div ' . $attrString . '>' . $cssStyles . $slidesHtml . $controlsHtml . $jsScript . '</div>';
+    
+    error_log('CSS Slider renderizado, total length: ' . strlen($fullHtml));
+    return $fullHtml;
 }
 
 /**
