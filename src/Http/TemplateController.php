@@ -483,6 +483,88 @@ private function renderComponent($component)
         }
     }
 
+    // ==============================================
+    // SOLUCIÓN ESPECÍFICA PARA MODALES
+    // ==============================================
+    // Detectar si es un modal Bootstrap
+    $isModal = ($tag === 'div' && 
+                isset($attributes['role']) && 
+                $attributes['role'] === 'dialog' &&
+                strpos($attributes['class'] ?? '', 'modal') !== false);
+    
+    if ($isModal) {
+        // Reconstruir los atributos en el orden correcto para modales
+        $modalAttrs = [];
+        
+        // 1. ID (si existe)
+        if (!empty($attributes['id'])) {
+            $modalAttrs[] = 'id="' . htmlspecialchars($attributes['id']) . '"';
+        }
+        
+        // 2. tabindex
+        $modalAttrs[] = 'tabindex="' . htmlspecialchars($attributes['tabindex'] ?? '-1') . '"';
+        
+        // 3. role
+        $modalAttrs[] = 'role="dialog"';
+        
+        // 4. aria-labelledby
+        if (!empty($attributes['aria-labelledby'])) {
+            $modalAttrs[] = 'aria-labelledby="' . htmlspecialchars($attributes['aria-labelledby']) . '"';
+        }
+        
+        // 5. Clases - orden específico
+        $modalClasses = [];
+        $classAttr = $attributes['class'] ?? '';
+        
+        // Extraer clases específicas de modal
+        $allClasses = explode(' ', $classAttr);
+        if (in_array('modal', $allClasses)) $modalClasses[] = 'modal';
+        if (in_array('fade', $allClasses)) $modalClasses[] = 'fade';
+        if (in_array('modal-lg', $allClasses)) $modalClasses[] = 'modal-lg';
+        if (in_array('modal-sm', $allClasses)) $modalClasses[] = 'modal-sm';
+        if (in_array('modal-xl', $allClasses)) $modalClasses[] = 'modal-xl';
+        
+        // Agregar clase 'in' si está visible
+        if (isset($attributes['style']) && strpos($attributes['style'], 'display: block') !== false) {
+            $modalClasses[] = 'in';
+        }
+        
+        // Agregar otras clases que no sean de modal (para mantener compatibilidad)
+        foreach ($allClasses as $cls) {
+            if (!in_array($cls, ['modal', 'fade', 'modal-lg', 'modal-sm', 'modal-xl', 'in']) && 
+                !empty($cls)) {
+                $modalClasses[] = $cls;
+            }
+        }
+        
+        if (!empty($modalClasses)) {
+            $modalAttrs[] = 'class="' . implode(' ', $modalClasses) . '"';
+        }
+        
+        // 6. Estilo - formato específico para modales visibles
+        if (isset($attributes['style'])) {
+            if (strpos($attributes['style'], 'display: block') !== false) {
+                $modalAttrs[] = 'style="display: block; padding-right: 15px;"';
+            } else {
+                $modalAttrs[] = 'style="' . htmlspecialchars($attributes['style']) . '"';
+            }
+        }
+        
+        // 7. Agregar otros atributos que puedan faltar (data-*, etc.)
+        foreach ($attributes as $key => $value) {
+            if (!in_array($key, ['id', 'tabindex', 'role', 'aria-labelledby', 'class', 'style']) && 
+                $value !== '' && $value !== null) {
+                $modalAttrs[] = htmlspecialchars($key) . '="' . htmlspecialchars($value) . '"';
+            }
+        }
+        
+        // Reemplazar el attrString con el orden correcto para modales
+        $attrString = implode(' ', $modalAttrs);
+    }
+    // ==============================================
+    // FIN DE SOLUCIÓN PARA MODALES
+    // ==============================================
+    
     // Manejo específico para dynamic-form
     if (($component['type'] ?? '') === 'dynamic-form') {
         $tag = 'form';
@@ -515,7 +597,6 @@ private function renderComponent($component)
     // Construir y retornar HTML final
     return $this->buildFinalHtml($tag, $attrString, $innerHtml, $isImage);
 }
-
 /**
  * Renderiza el componente css-slider con soporte para imágenes y videos
  */
