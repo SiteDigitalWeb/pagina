@@ -107,7 +107,7 @@ public function create(StorePageRequest $request)
 
     } catch (\Exception $e) {
         // Log del error para debugging
-        \Log::error('Error al crear página: ' . $e->getMessage());
+        // \Log::error('Error al crear página: ' . $e->getMessage());
         
         return redirect()->back()
             ->withInput()
@@ -226,7 +226,7 @@ public function destroy($id)
             ]);
 
     } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-        \Log::error('Página no encontrada al intentar eliminar: ' . $e->getMessage());
+        //  \Log::error('Página no encontrada al intentar eliminar: ' . $e->getMessage());
         return redirect()->back()
             ->with([
                 'status' => 'error',
@@ -234,7 +234,7 @@ public function destroy($id)
             ]);
             
     } catch (\Exception $e) {
-        \Log::error('Error al eliminar página: ' . $e->getMessage());
+        // \Log::error('Error al eliminar página: ' . $e->getMessage());
         return redirect()->back()
             ->with([
                 'status' => 'error',

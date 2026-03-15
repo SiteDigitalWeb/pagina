@@ -33,29 +33,29 @@ $tenant = $uuid ?? 'default';
         $folder = $request->get('folder', '');
         $currentPath = $tenant . ($folder ? "/{$folder}" : '');
         
-        \Log::info("=== FILE MANAGER INDEX ===");
-        \Log::info("Tenant: {$tenant}");
-        \Log::info("Current Path: {$currentPath}");
+        // \Log::info("=== FILE MANAGER INDEX ===");
+        // \Log::info("Tenant: {$tenant}");
+        // \Log::info("Current Path: {$currentPath}");
         
         // Verificar físicamente qué archivos hay
         $physicalPath = public_path("saas/{$currentPath}");
-        \Log::info("Physical path: {$physicalPath}");
-        \Log::info("Physical path exists: " . (is_dir($physicalPath) ? 'YES' : 'NO'));
+        // \Log::info("Physical path: {$physicalPath}");
+        // \Log::info("Physical path exists: " . (is_dir($physicalPath) ? 'YES' : 'NO'));
         
         if (is_dir($physicalPath)) {
             $physicalFiles = scandir($physicalPath);
             $imageFiles = array_filter($physicalFiles, function($file) {
                 return preg_match('/\.(jpg|jpeg|png|gif|bmp|webp|svg|ico)$/i', $file);
             });
-            \Log::info("Physical image files: " . json_encode(array_values($imageFiles)));
+            // \Log::info("Physical image files: " . json_encode(array_values($imageFiles)));
         }
         
         // Usar disk 'public'
         $files = Storage::disk('public')->files($currentPath);
         $directories = Storage::disk('public')->directories($currentPath);
         
-        \Log::info("Storage files found: " . count($files));
-        \Log::info("Storage directories found: " . count($directories));
+        // \Log::info("Storage files found: " . count($files));
+        // \Log::info("Storage directories found: " . count($directories));
         
         $fileList = [];
         foreach ($files as $file) {
@@ -67,9 +67,9 @@ $tenant = $uuid ?? 'default';
                 $physicalFile = public_path("saas/{$file}");
                 $fileExists = file_exists($physicalFile);
                 
-                \Log::info("Processing file: {$file}");
-                \Log::info(" - Relative Path: {$fileUrl}");
-                \Log::info(" - Physical exists: " . ($fileExists ? 'YES' : 'NO'));
+                // \Log::info("Processing file: {$file}");
+                // \Log::info(" - Relative Path: {$fileUrl}");
+                // \Log::info(" - Physical exists: " . ($fileExists ? 'YES' : 'NO'));
                 
                 if ($fileExists) {
                     $fileSize = filesize($physicalFile);
@@ -85,14 +85,14 @@ $tenant = $uuid ?? 'default';
                         'physical_exists' => true
                     ];
                     
-                    \Log::info(" - ADDED to fileList");
+                    // \Log::info(" - ADDED to fileList");
                 } else {
-                    \Log::warning(" - SKIPPED - File doesn't exist physically");
+                    // \Log::warning(" - SKIPPED - File doesn't exist physically");
                 }
             }
         }
         
-        \Log::info("Total files in fileList: " . count($fileList));
+        // \Log::info("Total files in fileList: " . count($fileList));
         
         // Ordenar archivos por fecha de modificación
         usort($fileList, function($a, $b) {
@@ -121,7 +121,7 @@ $tenant = $uuid ?? 'default';
     
     public function upload(Request $request)
     {
-        \Log::info("=== FILE UPLOAD START ===");
+        // \Log::info("=== FILE UPLOAD START ===");
         
         try {
             $request->validate([
@@ -138,30 +138,30 @@ $tenant = $uuid ?? 'default';
             $folder = $request->folder ?: '';
             $file = $request->file('file');
             
-            \Log::info("Upload - Tenant: {$tenant}, Folder: {$folder}");
-            \Log::info("File: " . $file->getClientOriginalName());
-            \Log::info("File size: " . $file->getSize());
+            // \Log::info("Upload - Tenant: {$tenant}, Folder: {$folder}");
+            // \Log::info("File: " . $file->getClientOriginalName());
+            // \Log::info("File size: " . $file->getSize());
             
             // Crear nombre único
             $fileName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) 
                        . '_' . time() . '.' . $file->getClientOriginalExtension();
             $path = $tenant . ($folder ? "/{$folder}" : '');
             
-            \Log::info("Target path: {$path}");
-            \Log::info("File name: {$fileName}");
+            // \Log::info("Target path: {$path}");
+            // \Log::info("File name: {$fileName}");
             
             // RUTA FÍSICA ABSOLUTA
             $physicalDir = public_path("saas/{$path}");
             $physicalPath = public_path("saas/{$path}/{$fileName}");
             
-            \Log::info("Physical directory: {$physicalDir}");
-            \Log::info("Physical file path: {$physicalPath}");
+            // \Log::info("Physical directory: {$physicalDir}");
+            // \Log::info("Physical file path: {$physicalPath}");
             
             // VERIFICAR Y CREAR DIRECTORIO MANUALMENTE
             if (!is_dir($physicalDir)) {
-                \Log::info("Directory doesn't exist, creating: {$physicalDir}");
+                // \Log::info("Directory doesn't exist, creating: {$physicalDir}");
                 $mkdirResult = mkdir($physicalDir, 0755, true);
-                \Log::info("mkdir result: " . ($mkdirResult ? 'SUCCESS' : 'FAILED'));
+                // \Log::info("mkdir result: " . ($mkdirResult ? 'SUCCESS' : 'FAILED'));
                 
                 if (!$mkdirResult) {
                     throw new \Exception("No se pudo crear el directorio: {$physicalDir}");
@@ -169,13 +169,13 @@ $tenant = $uuid ?? 'default';
             }
             
             // VERIFICAR PERMISOS DEL DIRECTORIO
-            \Log::info("Directory exists: " . (is_dir($physicalDir) ? 'YES' : 'NO'));
-            \Log::info("Directory writable: " . (is_writable($physicalDir) ? 'YES' : 'NO'));
+            // \Log::info("Directory exists: " . (is_dir($physicalDir) ? 'YES' : 'NO'));
+            // \Log::info("Directory writable: " . (is_writable($physicalDir) ? 'YES' : 'NO'));
             
             // GUARDAR MANUALMENTE
-            \Log::info("Attempting manual file save...");
+            // \Log::info("Attempting manual file save...");
             $manualSave = $file->move($physicalDir, $fileName);
-            \Log::info("Manual save result: " . ($manualSave ? 'SUCCESS' : 'FAILED'));
+            // \Log::info("Manual save result: " . ($manualSave ? 'SUCCESS' : 'FAILED'));
             
             if (!$manualSave) {
                 throw new \Exception('No se pudo guardar el archivo manualmente');
@@ -183,18 +183,18 @@ $tenant = $uuid ?? 'default';
             
             // VERIFICAR QUE EL ARCHIVO EXISTE FÍSICAMENTE
             $fileExists = file_exists($physicalPath);
-            \Log::info("Physical file exists after save: " . ($fileExists ? 'YES' : 'NO'));
+            // \Log::info("Physical file exists after save: " . ($fileExists ? 'YES' : 'NO'));
             
             if (!$fileExists) {
                 throw new \Exception('El archivo no se creó físicamente');
             }
             
             $fileSize = filesize($physicalPath);
-            \Log::info("Physical file size: {$fileSize} bytes");
+            // \Log::info("Physical file size: {$fileSize} bytes");
             
             // Generar RUTA RELATIVA (sin dominio)
             $fileUrl = $this->getRelativePath("{$path}/{$fileName}");
-            \Log::info("Generated Relative Path: {$fileUrl}");
+            // \Log::info("Generated Relative Path: {$fileUrl}");
             
             return response()->json([
                 'success' => true,
@@ -205,8 +205,8 @@ $tenant = $uuid ?? 'default';
             ]);
             
         } catch (\Exception $e) {
-            \Log::error("UPLOAD ERROR: " . $e->getMessage());
-            \Log::error("Stack trace: " . $e->getTraceAsString());
+            // \Log::error("UPLOAD ERROR: " . $e->getMessage());
+            // \Log::error("Stack trace: " . $e->getTraceAsString());
             
             return response()->json([
                 'success' => false,
@@ -245,7 +245,7 @@ $tenant = $uuid ?? 'default';
             ]);
             
         } catch (\Exception $e) {
-            \Log::error("Error creando carpeta: " . $e->getMessage());
+            // \Log::error("Error creando carpeta: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error al crear carpeta: ' . $e->getMessage()

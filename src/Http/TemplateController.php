@@ -484,7 +484,7 @@ private function renderComponent($component)
     }
 
     // ==============================================
-    // SOLUCIÓN ESPECÍFICA PARA MODALES
+    // SOLUCIÓN ESPECÍFICA PARA MODALES BOOTSTRAP
     // ==============================================
     // Detectar si es un modal Bootstrap
     $isModal = ($tag === 'div' && 
@@ -524,10 +524,8 @@ private function renderComponent($component)
         if (in_array('modal-sm', $allClasses)) $modalClasses[] = 'modal-sm';
         if (in_array('modal-xl', $allClasses)) $modalClasses[] = 'modal-xl';
         
-        // Agregar clase 'in' si está visible
-        if (isset($attributes['style']) && strpos($attributes['style'], 'display: block') !== false) {
-            $modalClasses[] = 'in';
-        }
+        // Agregar clase 'in' para modal visible
+        $modalClasses[] = 'in';
         
         // Agregar otras clases que no sean de modal (para mantener compatibilidad)
         foreach ($allClasses as $cls) {
@@ -541,14 +539,8 @@ private function renderComponent($component)
             $modalAttrs[] = 'class="' . implode(' ', $modalClasses) . '"';
         }
         
-        // 6. Estilo - formato específico para modales visibles
-        if (isset($attributes['style'])) {
-            if (strpos($attributes['style'], 'display: block') !== false) {
-                $modalAttrs[] = 'style="display: block; padding-right: 15px;"';
-            } else {
-                $modalAttrs[] = 'style="' . htmlspecialchars($attributes['style']) . '"';
-            }
-        }
+        // 6. Estilo - modal visible con padding correcto
+        $modalAttrs[] = 'style="display: block; padding-right: 15px;"';
         
         // 7. Agregar otros atributos que puedan faltar (data-*, etc.)
         foreach ($attributes as $key => $value) {
@@ -597,12 +589,24 @@ private function renderComponent($component)
     // Construir y retornar HTML final
     return $this->buildFinalHtml($tag, $attrString, $innerHtml, $isImage);
 }
-/**
- * Renderiza el componente css-slider con soporte para imágenes y videos
- */
-/**
- * Renderiza el componente css-slider con soporte para imágenes y videos
- */
+
+private function buildFinalHtml($tag, $attrString, $innerHtml, $isImage = false)
+{
+    if ($isImage) {
+        return "<{$tag} {$attrString}>";
+    }
+    
+    // Asegurar que la etiqueta no tenga espacios
+    $tag = trim($tag);
+    
+    // Si hay atributos, agregar un espacio antes
+    if (!empty(trim($attrString))) {
+        return "<{$tag} {$attrString}>{$innerHtml}</{$tag}>";
+    } else {
+        return "<{$tag}>{$innerHtml}</{$tag}>";
+    }
+}
+
 private function renderCssSlider($component)
 {
     error_log('=== RENDER CSS SLIDER V2 ===');
@@ -1835,16 +1839,6 @@ private function buildAttributesString($attributes): string
 /**
  * Construye el HTML final según el tipo de elemento
  */
-private function buildFinalHtml(string $tag, string $attrString, string $innerHtml, bool $isImage): string
-{
-    if ($isImage) {
-        // Elementos img son auto-cerrados
-        return "<{$tag}{$attrString} />";
-    }
-
-    // Elementos normales con cierre
-    return "<{$tag}{$attrString}>{$innerHtml}</{$tag}>";
-}
 
 
 private function prepareTemplateContent($content)

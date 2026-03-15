@@ -20,6 +20,18 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   
   <style>
+    .btn-purple {
+    background-color: #6f42c1;
+    color: white;
+    border-color: #6f42c1;
+}
+.btn-purple:hover {
+    background-color: #5a32a3;
+    color: white;
+}
+.bg-purple {
+    background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%) !important;
+}
     body, html {
       margin: 0;
       height: 100%;
@@ -208,6 +220,12 @@
     </div>
     
     <div class="panel__actions">
+      <button id="ai-template-btn" class="btn btn-success btn-sm" title="Generar template con IA">
+    <i class="bi bi-magic"></i> Template IA
+</button>
+      <button id="ai-show-btn" class="btn btn-purple btn-sm" title="Asistente IA">
+    <i class="bi bi-robot"></i> IA
+</button>
       <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#formModal">
         Abrir Formulario
       </button>
@@ -290,6 +308,90 @@
     <div id="custom-components"></div>
   </div>
 
+  <!-- Modal de Asistente IA -->
+<div class="modal fade" id="aiModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-purple text-white">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-robot me-2 fs-4"></i>
+                    <h5 class="modal-title mb-0 fw-bold">Asistente IA - DeepSeek</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <!-- Tipo de acción -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">¿Qué quieres hacer?</label>
+                    <select id="aiActionType" class="form-select">
+                        <option value="general">Generar texto general</option>
+                        <option value="improve">Mejorar texto existente</option>
+                        <option value="headline">Generar titulares</option>
+                        <option value="seo">Generar meta descripción SEO</option>
+                        <option value="translate">Traducir texto</option>
+                        <option value="html">Generar código HTML</option>
+                        <option value="css">Generar código CSS</option>
+                    </select>
+                </div>
+
+                <!-- Campo de idioma (solo para traducción) -->
+                <div class="mb-4" id="languageField" style="display: none;">
+                    <label class="form-label fw-bold">Idioma de destino</label>
+                    <select id="targetLanguage" class="form-select">
+                        <option value="español">Español</option>
+                        <option value="inglés">Inglés</option>
+                        <option value="francés">Francés</option>
+                        <option value="alemán">Alemán</option>
+                        <option value="italiano">Italiano</option>
+                        <option value="portugués">Portugués</option>
+                        <option value="catalán">Catalán</option>
+                        <option value="gallego">Gallego</option>
+                        <option value="euskera">Euskera</option>
+                    </select>
+                </div>
+
+                <!-- Prompt/Instrucción -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold" id="promptLabel">Describe lo que quieres generar:</label>
+                    <textarea id="aiPrompt" class="form-control" rows="4" placeholder="Ej: Un texto persuasivo para un botón de venta..."></textarea>
+                </div>
+
+                <!-- Contexto (solo si hay componente seleccionado) -->
+                <div class="mb-4" id="contextField" style="display: none;">
+                    <label class="form-label fw-bold">Contexto (texto seleccionado):</label>
+                    <div class="border p-3 bg-light rounded" id="selectedContext"></div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-purple" id="generateWithAI">
+                        <i class="bi bi-magic"></i> Generar con IA
+                    </button>
+                    <button type="button" class="btn btn-success" id="insertToEditor" style="display: none;">
+                        <i class="bi bi-check-circle"></i> Insertar en editor
+                    </button>
+                </div>
+
+                <!-- Área de resultado -->
+                <div class="mt-4" id="aiResultArea" style="display: none;">
+                    <hr>
+                    <h6 class="fw-bold mb-3">Resultado:</h6>
+                    <div class="border p-3 bg-light rounded mb-2" id="aiResult"></div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-sm btn-outline-primary" id="copyResult">
+                            <i class="bi bi-clipboard"></i> Copiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
   <!-- Scripts CDN -->
   <script src="https://unpkg.com/grapesjs"></script>
   <script src="https://unpkg.com/grapesjs-preset-webpage"></script>
@@ -343,6 +445,360 @@
         }
       }
     });
+
+
+   // =============================================
+// ASISTENTE IA - VERSIÓN COMPLETA
+// =============================================
+
+let lastAIResult = '';
+let currentComponent = null;
+
+// Abrir modal de IA
+document.getElementById('ai-show-btn').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('aiModal'));
+    const selected = editor.getSelected();
+    
+    // Resetear campos
+    document.getElementById('aiPrompt').value = '';
+    document.getElementById('aiResultArea').style.display = 'none';
+    document.getElementById('insertToEditor').style.display = 'none';
+    document.getElementById('aiActionType').value = 'general';
+    document.getElementById('languageField').style.display = 'none';
+
+    
+    // Si hay un componente seleccionado, obtener su texto
+    if (selected) {
+        currentComponent = selected;
+        const contextField = document.getElementById('contextField');
+        const selectedContext = document.getElementById('selectedContext');
+        
+        let contextText = '';
+        
+        if (selected.get('type') === 'text' || selected.get('type') === 'textnode') {
+            contextText = selected.get('content') || '';
+        } else {
+            const textComponents = selected.find('*[type="text"]');
+            if (textComponents.length > 0) {
+                contextText = textComponents[0].get('content') || '';
+            }
+        }
+        
+        if (contextText) {
+            selectedContext.textContent = contextText;
+            contextField.style.display = 'block';
+            document.getElementById('aiPrompt').value = contextText;
+            document.getElementById('aiActionType').value = 'improve';
+        } else {
+            contextField.style.display = 'none';
+        }
+    } else {
+        currentComponent = null;
+        document.getElementById('contextField').style.display = 'none';
+    }
+    
+    modal.show();
+});
+
+// Mostrar/ocultar campo de idioma
+document.getElementById('aiActionType').addEventListener('change', function() {
+    const languageField = document.getElementById('languageField');
+    languageField.style.display = this.value === 'translate' ? 'block' : 'none';
+});
+
+// Generar con IA
+document.getElementById('generateWithAI').addEventListener('click', async function() {
+    const actionType = document.getElementById('aiActionType').value;
+    let prompt = document.getElementById('aiPrompt').value.trim();
+    const targetLanguage = document.getElementById('targetLanguage').value;
+    
+    if (!prompt) {
+        alert('Por favor, ingresa un texto o instrucción');
+        return;
+    }
+    
+    const button = this;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch('{{ route("ai.generate") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                prompt: prompt,
+                type: actionType,
+                target_language: targetLanguage
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            lastAIResult = result.text;
+            
+            const resultEl = document.getElementById('aiResult');
+            if (actionType === 'html' || actionType === 'css') {
+                resultEl.innerHTML = `<pre class="mb-0 p-2 bg-dark text-light rounded"><code>${escapeHtml(result.text)}</code></pre>`;
+            } else {
+                resultEl.innerHTML = `<div class="p-3 bg-light rounded">${result.text.replace(/\n/g, '<br>')}</div>`;
+            }
+            
+            document.getElementById('aiResultArea').style.display = 'block';
+            document.getElementById('insertToEditor').style.display = currentComponent ? 'inline-block' : 'none';
+            
+            showStatus('✅ Generado correctamente', 'success');
+        } else {
+            showStatus('❌ ' + (result.message || 'Error al generar'), 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showStatus('❌ Error de conexión', 'error');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+});
+
+// Insertar resultado en el editor
+document.getElementById('insertToEditor').addEventListener('click', function() {
+    const actionType = document.getElementById('aiActionType').value;
+    const selected = currentComponent;
+    
+    if (!selected || !lastAIResult) return;
+    
+    try {
+        if (actionType === 'improve' || actionType === 'translate' || actionType === 'general') {
+            if (selected.get('type') === 'text' || selected.get('type') === 'textnode') {
+                selected.set('content', lastAIResult);
+            } else {
+                const textComponents = selected.find('*[type="text"]');
+                if (textComponents.length > 0) {
+                    textComponents[0].set('content', lastAIResult);
+                }
+            }
+            showStatus('✅ Texto actualizado', 'success');
+        } else if (actionType === 'html') {
+            selected.replaceWith(lastAIResult);
+            showStatus('✅ HTML insertado', 'success');
+        }
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('aiModal'));
+        modal.hide();
+        
+    } catch (error) {
+        console.error('Error al insertar:', error);
+        showStatus('❌ Error al insertar', 'error');
+    }
+});
+
+// Copiar resultado
+document.getElementById('copyResult').addEventListener('click', function() {
+    navigator.clipboard.writeText(lastAIResult).then(() => {
+        showStatus('✅ Copiado al portapapeles', 'success');
+    });
+});
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showStatus(message, type = 'info') {
+    const statusEl = document.getElementById('status-message');
+    if (statusEl) {
+        statusEl.textContent = message;
+        statusEl.className = `status-message status-${type}`;
+        statusEl.style.display = 'inline-block';
+        setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
+    }
+}
+
+
+// =============================================
+// GENERADOR DE TEMPLATES CON IA
+// =============================================
+
+// Comando para generar template con IA
+editor.Commands.add('generate-template-with-ai', {
+    run(editor, sender) {
+        // Abrir modal para describir el template
+        const modalContent = `
+            <div class="p-4">
+                <h5 class="mb-3">Generar Template con IA</h5>
+                <p class="text-muted small">Describe el template que necesitas y la IA lo generará automáticamente.</p>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Tipo de template:</label>
+                    <select id="ai-template-type" class="form-select">
+                        <option value="landing">Landing Page</option>
+                        <option value="blog">Blog/Artículo</option>
+                        <option value="empresa">Página Empresarial</option>
+                        <option value="tienda">Tienda Online</option>
+                        <option value="portafolio">Portafolio</option>
+                        <option value="contacto">Página de Contacto</option>
+                        <option value="servicios">Página de Servicios</option>
+                        <option value="about">Acerca de / Sobre Nosotros</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Estilo / Tono:</label>
+                    <select id="ai-template-style" class="form-select">
+                        <option value="moderno">Moderno</option>
+                        <option value="profesional">Profesional</option>
+                        <option value="creativo">Creativo</option>
+                        <option value="minimalista">Minimalista</option>
+                        <option value="corporativo">Corporativo</option>
+                        <option value="divertido">Divertido</option>
+                        <option value="elegante">Elegante</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Colores principales:</label>
+                    <div class="d-flex gap-2">
+                        <input type="color" id="ai-color-1" class="form-control form-control-color" value="#007bff" title="Color primario">
+                        <input type="color" id="ai-color-2" class="form-control form-control-color" value="#6c757d" title="Color secundario">
+                        <input type="color" id="ai-color-3" class="form-control form-control-color" value="#f8f9fa" title="Color de fondo">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Descripción adicional (opcional):</label>
+                    <textarea id="ai-template-description" class="form-control" rows="3" placeholder="Ej: Quiero una landing page para una empresa de tecnología con énfasis en sus productos..."></textarea>
+                </div>
+                
+                <div class="d-flex gap-2 justify-content-end mt-4">
+                    <button type="button" class="btn btn-outline-secondary" onclick="bootstrap.Modal.getInstance(document.getElementById('ai-template-modal')).hide()">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="generate-template-btn">
+                        <i class="bi bi-magic"></i> Generar Template
+                    </button>
+                </div>
+                
+                <div id="template-generation-status" class="mt-3" style="display: none;"></div>
+            </div>
+        `;
+
+        // Crear o reutilizar modal
+        let modalEl = document.getElementById('ai-template-modal');
+        if (!modalEl) {
+            modalEl = document.createElement('div');
+            modalEl.id = 'ai-template-modal';
+            modalEl.className = 'modal fade';
+            modalEl.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">
+                                <i class="bi bi-magic me-2"></i>
+                                Generar Template con IA
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" id="ai-template-modal-body">
+                            ${modalContent}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modalEl);
+        } else {
+            document.getElementById('ai-template-modal-body').innerHTML = modalContent;
+        }
+
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        // Evento para generar template
+        setTimeout(() => {
+            document.getElementById('generate-template-btn').addEventListener('click', async function() {
+                const type = document.getElementById('ai-template-type').value;
+                const style = document.getElementById('ai-template-style').value;
+                const color1 = document.getElementById('ai-color-1').value;
+                const color2 = document.getElementById('ai-color-2').value;
+                const color3 = document.getElementById('ai-color-3').value;
+                const description = document.getElementById('ai-template-description').value;
+                
+                const statusDiv = document.getElementById('template-generation-status');
+                statusDiv.style.display = 'block';
+                statusDiv.className = 'alert alert-info';
+                statusDiv.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando template... Esto puede tomar unos segundos.';
+                
+                const generateBtn = this;
+                generateBtn.disabled = true;
+                
+                try {
+                    // Construir prompt para la IA
+                    let prompt = `Genera una página web completa en HTML con Bootstrap 5. `;
+                    prompt += `Tipo: ${type}, Estilo: ${style}. `;
+                    prompt += `Colores: primario ${color1}, secundario ${color2}, fondo ${color3}. `;
+                    
+                    if (description) {
+                        prompt += `Descripción adicional: ${description}. `;
+                    }
+                    
+                    prompt += `La página debe incluir: navbar, sección hero, características/servicios, y footer. `;
+                    prompt += `Usa Bootstrap 5 con clases responsive. El HTML debe ser completo y autónomo.`;
+                    
+                    const response = await fetch('{{ route("ai.generate") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            type: 'html'
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        statusDiv.className = 'alert alert-success';
+                        statusDiv.innerHTML = '<i class="bi bi-check-circle"></i> Template generado correctamente. Cargando en el editor...';
+                        
+                        // Limpiar editor actual
+                        editor.DomComponents.clear();
+                        editor.CssComposer.clear();
+                        
+                        // Añadir el HTML generado
+                        editor.setComponents(result.text);
+                        
+                        // Cerrar modal después de 1 segundo
+                        setTimeout(() => {
+                            modal.hide();
+                            showStatus('✅ Template generado y cargado en el editor', 'success');
+                        }, 1000);
+                    } else {
+                        statusDiv.className = 'alert alert-danger';
+                        statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error: ' + (result.message || 'No se pudo generar el template');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    statusDiv.className = 'alert alert-danger';
+                    statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error de conexión: ' + error.message;
+                } finally {
+                    generateBtn.disabled = false;
+                }
+            });
+        }, 500);
+    }
+});
+
+document.getElementById('ai-template-btn').addEventListener('click', function() {
+    editor.runCommand('generate-template-with-ai');
+});
 
     // Listener para cuando un asset es seleccionado en el Asset Manager
     editor.on('asset:active', (asset) => {
