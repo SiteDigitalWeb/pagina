@@ -85,70 +85,6 @@
     @include($web->template.'.assets-web.assets-preview')
     <link rel="stylesheet" href="/partials/estilos/estiloscomponentes.css"/>
 
-    <style>
-    {!! $styles !!}
-    /* Estilos para campanita y toasts */
-    .notif-bell {
-        position: fixed;
-        top: 12px;
-        right: 18px;
-        z-index: 1200;
-        cursor: pointer;
-        display:flex;
-        align-items:center;
-        gap:8px;
-    }
-    .notif-bell .badge-count {
-        background:#dc3545;
-        color:white;
-        font-weight:600;
-        border-radius:50%;
-        padding:3px 7px;
-        font-size:12px;
-        line-height:1;
-    }
-    .toast-container {
-        position: fixed;
-        top: 72px;
-        right: 18px;
-        z-index: 1300;
-        display: flex;
-        flex-direction: column;
-        gap:10px;
-    }
-    .toast-item {
-        min-width: 280px;
-        max-width: 360px;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-        padding: 12px 14px;
-        font-family: Arial, sans-serif;
-        cursor: pointer;
-    }
-    .toast-item h5 { margin:0 0 6px 0; font-size:14px; }
-    .toast-item p { margin:0; font-size:13px; color:#333; }
-    /* panel de notificaciones (historial) */
-    #notificaciones-panel {
-        position: fixed;
-        top: 56px;
-        right: 72px;
-        width: 360px;
-        max-height: 70vh;
-        overflow:auto;
-        z-index: 1250;
-        background: #fff;
-        border: 1px solid #e6e6e6;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-        border-radius: 8px;
-        display:none;
-    }
-    #notificaciones-panel .panel-header {
-        padding:10px 12px; border-bottom:1px solid #f0f0f0; font-weight:600;
-    }
-    #notificaciones-panel .panel-body { padding:10px; }
-    #notificaciones-panel .notif-row { padding:8px; border-bottom:1px dashed #eee; cursor:pointer; }
-    </style>
 
     <!-- DATOS ESTRUCTURADOS -->
     <script type="application/ld+json">
@@ -159,51 +95,24 @@
       "url": "{{ $seo_web->og_url ?? url()->current() }}"
     }
     </script>
-
-     @include('genericos.estadistica')
      @include('genericos.mensaje')
 
-    <!-- CSRF meta ya incluido -->
 </head>
 
-    @include($web->template.'.pages.menu')
 
 <body>
+@include($web->template.'.pages.menu')
 
-<!-- CAMPANITA (OPCION 1: arriba derecha) -->
-<div class="notif-bell" id="notifBell" title="Notificaciones">
-    <button id="bellBtn" class="btn btn-light" style="border-radius:50%; padding:8px;">
-        <i class="fas fa-bell"></i>
-    </button>
-    <span id="bellCount" class="badge-count" style="display:none">0</span>
-</div>
-
-<!-- Panel historial -->
-<div id="notificaciones-panel" aria-hidden="true">
-    <div class="panel-header">
-        🔔 Notificaciones
-        <button id="clearNotifs" class="btn btn-sm btn-link" style="float:right; font-size:13px;">Limpiar</button>
-    </div>
-    <div class="panel-body" id="panelBody">
-        <!-- filas de notificaciones -->
-    </div>
-</div>
-
-<!-- Contenedor de toasts -->
-<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
-
-<!-- CONTENIDO -->
 @if(!empty($content))
-    {!! $content !!}
+ {!! $content !!}
 @else
-    <div class="empty-content">
-        Esta plantilla no contiene ningún contenido aún.
-    </div>
+ <div class="empty-content">
+  Esta plantilla no contiene ningún contenido aún.
+ </div>
 @endif
 
-<!-- SCRIPTS -->
 <script defer>{!! $scripts !!}</script>
-
+@include('genericos.estadistica')
 <script defer src="/partials/scripts/testimonios.js"></script>
 <script defer src="/partials/scripts/tabs.js"></script>
 <script defer src="/partials/scripts/acordeon.js"></script>
@@ -212,7 +121,7 @@
 <script defer src="/partials/scripts/modal.js"></script>
 <script defer src="/partials/scripts/whatsapp.js"></script>
 
-<!-- SCRIPTS DE TERCEROS -->
+
 <script defer src="https://www.google.com/recaptcha/api.js?render={{ $recaptcha->site_key }}"></script>
 <script>
  grecaptcha.ready(function() {

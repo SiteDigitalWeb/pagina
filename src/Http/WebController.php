@@ -582,7 +582,6 @@ public function estadistica()
             'utm_campana'   => Input::get('utm_campana'),
             'remember_token'=> Input::get('_token'),
         ]);
-
         $pagina->save();
 
         return Redirect::to(Input::get('redireccion'))->with('status', 'ok_create');

@@ -41,6 +41,7 @@ public function editor(Request $request)
 
 public function preview($id)
 {
+
     if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
         // Entorno tenant específico
         $template = \Sitedigitalweb\Pagina\Tenant\Page::findOrFail($id);
@@ -187,6 +188,7 @@ public function pages($page)
         // Entorno tenant específico, sin usar website_id
         $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', $page)->firstOrFail();
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
+        $seo_web = \Sitedigitalweb\Pagina\Tenant\Cms_seo::first();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
         $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
         ->where('visibility', 1)
@@ -195,10 +197,12 @@ public function pages($page)
             $query->where('visibility', 1)->orderBy('position', 'asc');
         }])
         ->get();
+        
     } else {
         // Entorno central (host)
         $template = Page::where('slug', $page)->firstOrFail();
         $recaptcha = Cms_Recaptcha::first();
+        $seo_web = Cms_seo::first();
         $web = Cms_Template::first();
         $menuPages = Page::whereNull('page_id')
         ->where('visibility', 1)
@@ -208,30 +212,23 @@ public function pages($page)
         }])
         ->get();
     }
-
     $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
-
     $content = $this->renderComponent($structure ?? []);
     $styles = $this->renderStyles($template->styles);
     $scripts = $this->renderScripts($template->scripts);
-
     $tenantData = [
         'is_tenant' => isset($website),
         'tenant_id' => $website->id ?? null,
         'tenant_name' => $website->name ?? null
     ];
-
     $seo = [
         'title'       => $template->title ?? $template->name,
         'description' => $template->description ?? Str::limit(strip_tags($template->content), 160),
         'keywords'    => $template->keywords ?? '',
         'url'         => url()->current(),
     ];
-
     $templateFolder = $web->template ?? 'default';
-    
-      return view($templateFolder . '.pages.page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo'));
-
+    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web'));
 }
 
 private function renderScripts(array $scriptsArray): string

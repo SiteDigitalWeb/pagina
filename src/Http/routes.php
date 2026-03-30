@@ -211,8 +211,7 @@ Route::post('/push/send', [Sitedigitalweb\Pagina\Http\PushNotificationController
 
 
 Route::group(['middleware' => ['web']], function (){
-
-  Route::post('/tenants', [Sitedigitalweb\Pagina\Http\TenantController::class, 'store'])->name('tenants.store');
+Route::post('/tenants', [Sitedigitalweb\Pagina\Http\TenantController::class, 'store'])->name('tenants.store');
 Route::post('/whatsapp-track', [DigitalsiteSaaS\Pagina\Http\WebController::class, 'trackClick'])->name('whatsapp.track');
 Route::get('robots.txt', 'DigitalsiteSaaS\Pagina\Http\WebController@robot');
 
@@ -220,7 +219,7 @@ Route::post('/registroq', [DigitalsiteSaaS\Pagina\Http\WebController::class, 'su
  Route::post('/cms/submit', 'Sitedigitalweb\Pagina\Http\WebController@submitForm');
   Route::post('/cms/registro', 'Sitedigitalweb\Pagina\Http\WebController@submitForm');
 
- Route::get('mensajes/estadisticas', 'Sitedigitalweb\Pagina\Http\WebController@estadistica');
+ Route::post('mensajes/estadisticas', 'Sitedigitalweb\Pagina\Http\WebController@estadistica');
   Route::get('/', 'Sitedigitalweb\Pagina\Http\TemplateController@page');
  Route::get('/{page}', 'Sitedigitalweb\Pagina\Http\TemplateController@pages');
 

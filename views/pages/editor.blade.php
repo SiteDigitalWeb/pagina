@@ -219,13 +219,24 @@
       <span id="status-message" class="status-message" style="display: none;"></span>
     </div>
     
+
+
     <div class="panel__actions">
-      <button id="ai-template-btn" class="btn btn-success btn-sm" title="Generar template con IA">
-    <i class="bi bi-magic"></i> Template IA
+      <button
+    id="ai-section-btn"
+    class="btn btn-warning btn-sm"
+    disabled
+    style="opacity:0.6;transition:all 0.2s;"
+    title="Selecciona una sección primero">
+    <i class="bi bi-stars"></i> IA Sección
 </button>
-      <button id="ai-show-btn" class="btn btn-purple btn-sm" title="Asistente IA">
-    <i class="bi bi-robot"></i> IA
+
+
+<button id="ai-generate-btn" class="btn btn-purple btn-sm" title="Generar con IA">
+    <i class="bi bi-stars"></i> Generar con IA
 </button>
+
+
       <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#formModal">
         Abrir Formulario
       </button>
@@ -308,89 +319,6 @@
     <div id="custom-components"></div>
   </div>
 
-  <!-- Modal de Asistente IA -->
-<div class="modal fade" id="aiModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-purple text-white">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-robot me-2 fs-4"></i>
-                    <h5 class="modal-title mb-0 fw-bold">Asistente IA - DeepSeek</h5>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            
-            <div class="modal-body p-4">
-                <!-- Tipo de acción -->
-                <div class="mb-4">
-                    <label class="form-label fw-bold">¿Qué quieres hacer?</label>
-                    <select id="aiActionType" class="form-select">
-                        <option value="general">Generar texto general</option>
-                        <option value="improve">Mejorar texto existente</option>
-                        <option value="headline">Generar titulares</option>
-                        <option value="seo">Generar meta descripción SEO</option>
-                        <option value="translate">Traducir texto</option>
-                        <option value="html">Generar código HTML</option>
-                        <option value="css">Generar código CSS</option>
-                    </select>
-                </div>
-
-                <!-- Campo de idioma (solo para traducción) -->
-                <div class="mb-4" id="languageField" style="display: none;">
-                    <label class="form-label fw-bold">Idioma de destino</label>
-                    <select id="targetLanguage" class="form-select">
-                        <option value="español">Español</option>
-                        <option value="inglés">Inglés</option>
-                        <option value="francés">Francés</option>
-                        <option value="alemán">Alemán</option>
-                        <option value="italiano">Italiano</option>
-                        <option value="portugués">Portugués</option>
-                        <option value="catalán">Catalán</option>
-                        <option value="gallego">Gallego</option>
-                        <option value="euskera">Euskera</option>
-                    </select>
-                </div>
-
-                <!-- Prompt/Instrucción -->
-                <div class="mb-4">
-                    <label class="form-label fw-bold" id="promptLabel">Describe lo que quieres generar:</label>
-                    <textarea id="aiPrompt" class="form-control" rows="4" placeholder="Ej: Un texto persuasivo para un botón de venta..."></textarea>
-                </div>
-
-                <!-- Contexto (solo si hay componente seleccionado) -->
-                <div class="mb-4" id="contextField" style="display: none;">
-                    <label class="form-label fw-bold">Contexto (texto seleccionado):</label>
-                    <div class="border p-3 bg-light rounded" id="selectedContext"></div>
-                </div>
-
-                <!-- Botones de acción -->
-                <div class="d-flex justify-content-end gap-2">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-purple" id="generateWithAI">
-                        <i class="bi bi-magic"></i> Generar con IA
-                    </button>
-                    <button type="button" class="btn btn-success" id="insertToEditor" style="display: none;">
-                        <i class="bi bi-check-circle"></i> Insertar en editor
-                    </button>
-                </div>
-
-                <!-- Área de resultado -->
-                <div class="mt-4" id="aiResultArea" style="display: none;">
-                    <hr>
-                    <h6 class="fw-bold mb-3">Resultado:</h6>
-                    <div class="border p-3 bg-light rounded mb-2" id="aiResult"></div>
-                    <div class="d-flex justify-content-end gap-2">
-                        <button class="btn btn-sm btn-outline-primary" id="copyResult">
-                            <i class="bi bi-clipboard"></i> Copiar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
   <!-- Scripts CDN -->
   <script src="https://unpkg.com/grapesjs"></script>
@@ -445,360 +373,6 @@
         }
       }
     });
-
-
-   // =============================================
-// ASISTENTE IA - VERSIÓN COMPLETA
-// =============================================
-
-let lastAIResult = '';
-let currentComponent = null;
-
-// Abrir modal de IA
-document.getElementById('ai-show-btn').addEventListener('click', function() {
-    const modal = new bootstrap.Modal(document.getElementById('aiModal'));
-    const selected = editor.getSelected();
-    
-    // Resetear campos
-    document.getElementById('aiPrompt').value = '';
-    document.getElementById('aiResultArea').style.display = 'none';
-    document.getElementById('insertToEditor').style.display = 'none';
-    document.getElementById('aiActionType').value = 'general';
-    document.getElementById('languageField').style.display = 'none';
-
-    
-    // Si hay un componente seleccionado, obtener su texto
-    if (selected) {
-        currentComponent = selected;
-        const contextField = document.getElementById('contextField');
-        const selectedContext = document.getElementById('selectedContext');
-        
-        let contextText = '';
-        
-        if (selected.get('type') === 'text' || selected.get('type') === 'textnode') {
-            contextText = selected.get('content') || '';
-        } else {
-            const textComponents = selected.find('*[type="text"]');
-            if (textComponents.length > 0) {
-                contextText = textComponents[0].get('content') || '';
-            }
-        }
-        
-        if (contextText) {
-            selectedContext.textContent = contextText;
-            contextField.style.display = 'block';
-            document.getElementById('aiPrompt').value = contextText;
-            document.getElementById('aiActionType').value = 'improve';
-        } else {
-            contextField.style.display = 'none';
-        }
-    } else {
-        currentComponent = null;
-        document.getElementById('contextField').style.display = 'none';
-    }
-    
-    modal.show();
-});
-
-// Mostrar/ocultar campo de idioma
-document.getElementById('aiActionType').addEventListener('change', function() {
-    const languageField = document.getElementById('languageField');
-    languageField.style.display = this.value === 'translate' ? 'block' : 'none';
-});
-
-// Generar con IA
-document.getElementById('generateWithAI').addEventListener('click', async function() {
-    const actionType = document.getElementById('aiActionType').value;
-    let prompt = document.getElementById('aiPrompt').value.trim();
-    const targetLanguage = document.getElementById('targetLanguage').value;
-    
-    if (!prompt) {
-        alert('Por favor, ingresa un texto o instrucción');
-        return;
-    }
-    
-    const button = this;
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...';
-    button.disabled = true;
-    
-    try {
-        const response = await fetch('{{ route("ai.generate") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({
-                prompt: prompt,
-                type: actionType,
-                target_language: targetLanguage
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            lastAIResult = result.text;
-            
-            const resultEl = document.getElementById('aiResult');
-            if (actionType === 'html' || actionType === 'css') {
-                resultEl.innerHTML = `<pre class="mb-0 p-2 bg-dark text-light rounded"><code>${escapeHtml(result.text)}</code></pre>`;
-            } else {
-                resultEl.innerHTML = `<div class="p-3 bg-light rounded">${result.text.replace(/\n/g, '<br>')}</div>`;
-            }
-            
-            document.getElementById('aiResultArea').style.display = 'block';
-            document.getElementById('insertToEditor').style.display = currentComponent ? 'inline-block' : 'none';
-            
-            showStatus('✅ Generado correctamente', 'success');
-        } else {
-            showStatus('❌ ' + (result.message || 'Error al generar'), 'error');
-        }
-        
-    } catch (error) {
-        console.error('Error:', error);
-        showStatus('❌ Error de conexión', 'error');
-    } finally {
-        button.innerHTML = originalText;
-        button.disabled = false;
-    }
-});
-
-// Insertar resultado en el editor
-document.getElementById('insertToEditor').addEventListener('click', function() {
-    const actionType = document.getElementById('aiActionType').value;
-    const selected = currentComponent;
-    
-    if (!selected || !lastAIResult) return;
-    
-    try {
-        if (actionType === 'improve' || actionType === 'translate' || actionType === 'general') {
-            if (selected.get('type') === 'text' || selected.get('type') === 'textnode') {
-                selected.set('content', lastAIResult);
-            } else {
-                const textComponents = selected.find('*[type="text"]');
-                if (textComponents.length > 0) {
-                    textComponents[0].set('content', lastAIResult);
-                }
-            }
-            showStatus('✅ Texto actualizado', 'success');
-        } else if (actionType === 'html') {
-            selected.replaceWith(lastAIResult);
-            showStatus('✅ HTML insertado', 'success');
-        }
-        
-        const modal = bootstrap.Modal.getInstance(document.getElementById('aiModal'));
-        modal.hide();
-        
-    } catch (error) {
-        console.error('Error al insertar:', error);
-        showStatus('❌ Error al insertar', 'error');
-    }
-});
-
-// Copiar resultado
-document.getElementById('copyResult').addEventListener('click', function() {
-    navigator.clipboard.writeText(lastAIResult).then(() => {
-        showStatus('✅ Copiado al portapapeles', 'success');
-    });
-});
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function showStatus(message, type = 'info') {
-    const statusEl = document.getElementById('status-message');
-    if (statusEl) {
-        statusEl.textContent = message;
-        statusEl.className = `status-message status-${type}`;
-        statusEl.style.display = 'inline-block';
-        setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
-    }
-}
-
-
-// =============================================
-// GENERADOR DE TEMPLATES CON IA
-// =============================================
-
-// Comando para generar template con IA
-editor.Commands.add('generate-template-with-ai', {
-    run(editor, sender) {
-        // Abrir modal para describir el template
-        const modalContent = `
-            <div class="p-4">
-                <h5 class="mb-3">Generar Template con IA</h5>
-                <p class="text-muted small">Describe el template que necesitas y la IA lo generará automáticamente.</p>
-                
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Tipo de template:</label>
-                    <select id="ai-template-type" class="form-select">
-                        <option value="landing">Landing Page</option>
-                        <option value="blog">Blog/Artículo</option>
-                        <option value="empresa">Página Empresarial</option>
-                        <option value="tienda">Tienda Online</option>
-                        <option value="portafolio">Portafolio</option>
-                        <option value="contacto">Página de Contacto</option>
-                        <option value="servicios">Página de Servicios</option>
-                        <option value="about">Acerca de / Sobre Nosotros</option>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Estilo / Tono:</label>
-                    <select id="ai-template-style" class="form-select">
-                        <option value="moderno">Moderno</option>
-                        <option value="profesional">Profesional</option>
-                        <option value="creativo">Creativo</option>
-                        <option value="minimalista">Minimalista</option>
-                        <option value="corporativo">Corporativo</option>
-                        <option value="divertido">Divertido</option>
-                        <option value="elegante">Elegante</option>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Colores principales:</label>
-                    <div class="d-flex gap-2">
-                        <input type="color" id="ai-color-1" class="form-control form-control-color" value="#007bff" title="Color primario">
-                        <input type="color" id="ai-color-2" class="form-control form-control-color" value="#6c757d" title="Color secundario">
-                        <input type="color" id="ai-color-3" class="form-control form-control-color" value="#f8f9fa" title="Color de fondo">
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Descripción adicional (opcional):</label>
-                    <textarea id="ai-template-description" class="form-control" rows="3" placeholder="Ej: Quiero una landing page para una empresa de tecnología con énfasis en sus productos..."></textarea>
-                </div>
-                
-                <div class="d-flex gap-2 justify-content-end mt-4">
-                    <button type="button" class="btn btn-outline-secondary" onclick="bootstrap.Modal.getInstance(document.getElementById('ai-template-modal')).hide()">
-                        Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" id="generate-template-btn">
-                        <i class="bi bi-magic"></i> Generar Template
-                    </button>
-                </div>
-                
-                <div id="template-generation-status" class="mt-3" style="display: none;"></div>
-            </div>
-        `;
-
-        // Crear o reutilizar modal
-        let modalEl = document.getElementById('ai-template-modal');
-        if (!modalEl) {
-            modalEl = document.createElement('div');
-            modalEl.id = 'ai-template-modal';
-            modalEl.className = 'modal fade';
-            modalEl.innerHTML = `
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title">
-                                <i class="bi bi-magic me-2"></i>
-                                Generar Template con IA
-                            </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body" id="ai-template-modal-body">
-                            ${modalContent}
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modalEl);
-        } else {
-            document.getElementById('ai-template-modal-body').innerHTML = modalContent;
-        }
-
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-
-        // Evento para generar template
-        setTimeout(() => {
-            document.getElementById('generate-template-btn').addEventListener('click', async function() {
-                const type = document.getElementById('ai-template-type').value;
-                const style = document.getElementById('ai-template-style').value;
-                const color1 = document.getElementById('ai-color-1').value;
-                const color2 = document.getElementById('ai-color-2').value;
-                const color3 = document.getElementById('ai-color-3').value;
-                const description = document.getElementById('ai-template-description').value;
-                
-                const statusDiv = document.getElementById('template-generation-status');
-                statusDiv.style.display = 'block';
-                statusDiv.className = 'alert alert-info';
-                statusDiv.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando template... Esto puede tomar unos segundos.';
-                
-                const generateBtn = this;
-                generateBtn.disabled = true;
-                
-                try {
-                    // Construir prompt para la IA
-                    let prompt = `Genera una página web completa en HTML con Bootstrap 5. `;
-                    prompt += `Tipo: ${type}, Estilo: ${style}. `;
-                    prompt += `Colores: primario ${color1}, secundario ${color2}, fondo ${color3}. `;
-                    
-                    if (description) {
-                        prompt += `Descripción adicional: ${description}. `;
-                    }
-                    
-                    prompt += `La página debe incluir: navbar, sección hero, características/servicios, y footer. `;
-                    prompt += `Usa Bootstrap 5 con clases responsive. El HTML debe ser completo y autónomo.`;
-                    
-                    const response = await fetch('{{ route("ai.generate") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                        },
-                        body: JSON.stringify({
-                            prompt: prompt,
-                            type: 'html'
-                        })
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        statusDiv.className = 'alert alert-success';
-                        statusDiv.innerHTML = '<i class="bi bi-check-circle"></i> Template generado correctamente. Cargando en el editor...';
-                        
-                        // Limpiar editor actual
-                        editor.DomComponents.clear();
-                        editor.CssComposer.clear();
-                        
-                        // Añadir el HTML generado
-                        editor.setComponents(result.text);
-                        
-                        // Cerrar modal después de 1 segundo
-                        setTimeout(() => {
-                            modal.hide();
-                            showStatus('✅ Template generado y cargado en el editor', 'success');
-                        }, 1000);
-                    } else {
-                        statusDiv.className = 'alert alert-danger';
-                        statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error: ' + (result.message || 'No se pudo generar el template');
-                    }
-                    
-                } catch (error) {
-                    console.error('Error:', error);
-                    statusDiv.className = 'alert alert-danger';
-                    statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error de conexión: ' + error.message;
-                } finally {
-                    generateBtn.disabled = false;
-                }
-            });
-        }, 500);
-    }
-});
-
-document.getElementById('ai-template-btn').addEventListener('click', function() {
-    editor.runCommand('generate-template-with-ai');
-});
 
     // Listener para cuando un asset es seleccionado en el Asset Manager
     editor.on('asset:active', (asset) => {
@@ -1602,6 +1176,36 @@ document.getElementById('ai-template-btn').addEventListener('click', function() 
   </div>
 </div>
 
+<!-- Modal Generación IA -->
+<div class="modal fade" id="aiModal" tabindex="-1" aria-labelledby="aiModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title" id="aiModalLabel">
+                    <i class="bi bi-stars me-2"></i>Generar plantilla con IA
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="aiPrompt" class="form-label">Describe la plantilla que deseas generar</label>
+                    <textarea id="aiPrompt" class="form-control" rows="5" 
+                        placeholder="Ejemplo: 'Una landing page para un restaurante moderno con menú destacado, galería de fotos y formulario de reserva'"></textarea>
+                </div>
+                <div id="aiStatus" class="alert alert-info" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="aiSubmitBtn">
+                    <i class="bi bi-cloud-upload"></i> Generar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 <!-- Agregar enlace dinámico para Google Fonts -->
 <link id="google-fonts-link" rel="stylesheet" type="text/css">
 
@@ -2262,6 +1866,521 @@ $(document).ready(function () {
         </div>
     </div>
 </div>
+
+
+<!-- Modal Generación IA - Versión Completa -->
+<div class="modal fade" id="aiModal" tabindex="-1" aria-labelledby="aiModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-stars me-2 fs-4"></i>
+                    <h5 class="modal-title fw-bold" id="aiModalLabel">
+                        Generar Contenido con Inteligencia Artificial
+                    </h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <!-- Información del proceso -->
+                <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+                    <div class="d-flex">
+                        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                        <div>
+                            <strong>¿Cómo funciona?</strong><br>
+                            La IA analizará tu plantilla actual y modificará SOLO los textos e imágenes, 
+                            manteniendo intactos todos los estilos, colores y estructura. Podrás revisar los 
+                            cambios antes de aplicarlos.
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Input del prompt principal -->
+                <div class="mb-4">
+                    <label for="aiPrompt" class="form-label fw-semibold">
+                        <i class="bi bi-chat-text-fill me-1"></i> Describe el contenido que deseas generar
+                    </label>
+                    <textarea 
+                        id="aiPrompt" 
+                        class="form-control" 
+                        rows="4" 
+                        placeholder="Ejemplo: 'Una landing page para un restaurante italiano elegante con especialidad en pastas artesanales, vinos italianos y ambiente familiar. Incluir menú destacado, galería de platos y formulario de reservas.'"
+                        style="resize: vertical;"
+                    ></textarea>
+                    <div class="form-text mt-2">
+                        <i class="bi bi-lightbulb"></i> Sé específico: menciona el tipo de negocio, tono (formal/casual), público objetivo y elementos clave.
+                    </div>
+                </div>
+
+                <!-- Opciones avanzadas (colapsable) -->
+                <div class="mb-4">
+                    <button class="btn btn-outline-secondary btn-sm w-100" type="button" data-bs-toggle="collapse" data-bs-target="#advancedOptions" aria-expanded="false">
+                        <i class="bi bi-sliders2 me-1"></i> Opciones avanzadas
+                    </button>
+                    
+                    <div class="collapse mt-3" id="advancedOptions">
+                        <div class="card card-body bg-light">
+                            <div class="row g-3">
+                                <!-- Tono de la página -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">
+                                        <i class="bi bi-megaphone"></i> Tono de la página
+                                    </label>
+                                    <select id="aiTone" class="form-select form-select-sm">
+                                        <option value="profesional">Profesional / Corporativo</option>
+                                        <option value="casual" selected>Casual / Amigable</option>
+                                        <option value="creativo">Creativo / Inspirador</option>
+                                        <option value="formal">Formal / Serio</option>
+                                        <option value="entusiasta">Entusiasta / Energético</option>
+                                        <option value="minimalista">Minimalista / Directo</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Idioma -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">
+                                        <i class="bi bi-translate"></i> Idioma
+                                    </label>
+                                    <select id="aiLanguage" class="form-select form-select-sm">
+                                        <option value="es" selected>Español</option>
+                                        <option value="en">English</option>
+                                        <option value="pt">Português</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Longitud del texto -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">
+                                        <i class="bi bi-text-paragraph"></i> Longitud del texto
+                                    </label>
+                                    <select id="aiTextLength" class="form-select form-select-sm">
+                                        <option value="corto">Corto (conciso)</option>
+                                        <option value="medio" selected>Medio (informativo)</option>
+                                        <option value="largo">Largo (detallado)</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Fuente de imágenes -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold small">
+                                        <i class="bi bi-images"></i> Fuente de imágenes
+                                    </label>
+                                    <select id="aiImageSource" class="form-select form-select-sm">
+                                        <option value="unsplash" selected>Unsplash (gratis)</option>
+                                        <option value="pexels">Pexels (gratis)</option>
+                                        <option value="placeholder">Placeholder (por defecto)</option>
+                                        <option value="none">Mantener imágenes actuales</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Elementos a modificar -->
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small">
+                                        <i class="bi bi-pencil-square"></i> Elementos a modificar
+                                    </label>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="texts" id="modifyTexts" checked>
+                                            <label class="form-check-label small" for="modifyTexts">Textos</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="images" id="modifyImages" checked>
+                                            <label class="form-check-label small" for="modifyImages">Imágenes</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="buttons" id="modifyButtons" checked>
+                                            <label class="form-check-label small" for="modifyButtons">Botones</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="headings" id="modifyHeadings" checked>
+                                            <label class="form-check-label small" for="modifyHeadings">Encabezados</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Área de estado y progreso -->
+                <div id="aiStatusArea" style="display: none;">
+                    <div class="alert" id="aiStatus" role="alert">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <div id="aiStatusMessage">Procesando...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vista previa de cambios (se mostrará después de generar) -->
+                <div id="aiPreviewArea" style="display: none;">
+                    <div class="card border-primary mt-3">
+                        <div class="card-header bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-eye-fill me-1"></i> Vista previa de cambios
+                        </div>
+                        <div class="card-body p-3">
+                            <div id="aiChangesPreview" class="small">
+                                <!-- Los cambios se mostrarán aquí -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="aiClearBtn">
+                    <i class="bi bi-eraser me-1"></i>Limpiar
+                </button>
+                <button type="button" class="btn btn-primary" id="aiSubmitBtn">
+                    <i class="bi bi-cloud-upload me-1"></i> Generar Contenido
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos adicionales para el modal de IA */
+.modal-header.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border-bottom: none;
+}
+
+#aiPrompt:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+#aiStatusArea .alert {
+    animation: slideIn 0.3s ease-out;
+}
+
+#aiPreviewArea {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.change-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-right: 5px;
+}
+
+.change-badge.text { background: #e3f2fd; color: #1976d2; }
+.change-badge.image { background: #e8f5e9; color: #388e3c; }
+.change-badge.button { background: #fff3e0; color: #f57c00; }
+.change-badge.heading { background: #f3e5f5; color: #7b1fa2; }
+
+.change-item {
+    padding: 5px 0;
+    border-bottom: 1px solid #e9ecef;
+    font-family: monospace;
+    font-size: 0.75rem;
+}
+
+.change-item:last-child {
+    border-bottom: none;
+}
+
+.change-old {
+    color: #dc3545;
+    text-decoration: line-through;
+}
+
+.change-new {
+    color: #28a745;
+}
+
+.preview-stats {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+</style>
+
+<script>
+// Variable global para almacenar los cambios generados
+let generatedChanges = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const aiModal = document.getElementById('aiModal');
+    const aiPrompt = document.getElementById('aiPrompt');
+    const aiSubmitBtn = document.getElementById('aiSubmitBtn');
+    const aiClearBtn = document.getElementById('aiClearBtn');
+    const aiStatusArea = document.getElementById('aiStatusArea');
+    const aiStatus = document.getElementById('aiStatus');
+    const aiStatusMessage = document.getElementById('aiStatusMessage');
+    const aiPreviewArea = document.getElementById('aiPreviewArea');
+    const aiChangesPreview = document.getElementById('aiChangesPreview');
+
+    // Función para mostrar estado
+    function showStatus(message, type = 'info', showSpinner = true) {
+        aiStatusArea.style.display = 'block';
+        aiStatus.className = `alert alert-${type}`;
+        
+        if (showSpinner && type === 'info') {
+            aiStatusMessage.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    ${message}
+                </div>
+            `;
+        } else {
+            aiStatusMessage.innerHTML = message;
+        }
+        
+        // Auto-ocultar después de 5 segundos si es éxito o error
+        if (type === 'success' || type === 'danger') {
+            setTimeout(() => {
+                if (aiStatusArea.style.display !== 'none') {
+                    aiStatusArea.style.display = 'none';
+                }
+            }, 5000);
+        }
+    }
+
+    // Función para ocultar estado
+    function hideStatus() {
+        aiStatusArea.style.display = 'none';
+    }
+
+    // Función para mostrar vista previa de cambios
+    function showChangesPreview(changes) {
+        if (!changes || Object.keys(changes).length === 0) {
+            aiPreviewArea.style.display = 'none';
+            return;
+        }
+        
+        let html = '<div class="mb-2"><strong>📝 Resumen de cambios:</strong></div>';
+        let totalChanges = 0;
+        
+        const changeLabels = {
+            texts: { icon: '📝', label: 'Textos', class: 'text' },
+            images: { icon: '🖼️', label: 'Imágenes', class: 'image' },
+            buttons: { icon: '🔘', label: 'Botones', class: 'button' },
+            headings: { icon: '📌', label: 'Encabezados', class: 'heading' }
+        };
+        
+        for (const [type, items] of Object.entries(changes)) {
+            if (items && Object.keys(items).length > 0 && changeLabels[type]) {
+                const count = Object.keys(items).length;
+                totalChanges += count;
+                html += `
+                    <div class="mb-2">
+                        <span class="change-badge ${changeLabels[type].class}">
+                            ${changeLabels[type].icon} ${changeLabels[type].label}
+                        </span>
+                        <span class="ms-2">${count} elemento${count !== 1 ? 's' : ''} modificado${count !== 1 ? 's' : ''}</span>
+                    </div>
+                `;
+                
+                // Mostrar algunos ejemplos (máximo 3)
+                const examples = Object.entries(items).slice(0, 3);
+                examples.forEach(([path, newValue]) => {
+                    const shortPath = path.split(',').slice(-2).join(' > ');
+                    html += `
+                        <div class="change-item">
+                            <small class="text-muted">${shortPath}:</small><br>
+                            <span class="change-old">[viejo]</span> → 
+                            <span class="change-new">${escapeHtml(String(newValue).substring(0, 50))}${String(newValue).length > 50 ? '...' : ''}</span>
+                        </div>
+                    `;
+                });
+                
+                if (Object.keys(items).length > 3) {
+                    html += `<div class="change-item text-muted"><small>... y ${Object.keys(items).length - 3} más</small></div>`;
+                }
+            }
+        }
+        
+        html += `
+            <div class="preview-stats mt-3">
+                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                <strong>Total:</strong> ${totalChanges} cambios listos para aplicar
+            </div>
+        `;
+        
+        aiChangesPreview.innerHTML = html;
+        aiPreviewArea.style.display = 'block';
+    }
+
+    // Función para escapar HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Función para limpiar el formulario
+    function clearForm() {
+        aiPrompt.value = '';
+        document.getElementById('aiTone').value = 'casual';
+        document.getElementById('aiLanguage').value = 'es';
+        document.getElementById('aiTextLength').value = 'medio';
+        document.getElementById('aiImageSource').value = 'unsplash';
+        document.getElementById('modifyTexts').checked = true;
+        document.getElementById('modifyImages').checked = true;
+        document.getElementById('modifyButtons').checked = true;
+        document.getElementById('modifyHeadings').checked = true;
+        hideStatus();
+        aiPreviewArea.style.display = 'none';
+        generatedChanges = null;
+    }
+
+    // Botón limpiar
+    aiClearBtn.addEventListener('click', clearForm);
+
+    // Generar contenido con IA
+    aiSubmitBtn.addEventListener('click', async function() {
+        const prompt = aiPrompt.value.trim();
+        
+        if (!prompt) {
+            showStatus('Por favor, describe el contenido que deseas generar.', 'warning', false);
+            aiPrompt.focus();
+            return;
+        }
+        
+        if (prompt.length < 10) {
+            showStatus('Por favor, proporciona una descripción más detallada (mínimo 10 caracteres).', 'warning', false);
+            return;
+        }
+        
+        // Recoger opciones avanzadas
+        const options = {
+            tone: document.getElementById('aiTone').value,
+            language: document.getElementById('aiLanguage').value,
+            text_length: document.getElementById('aiTextLength').value,
+            image_source: document.getElementById('aiImageSource').value,
+            modify: {
+                texts: document.getElementById('modifyTexts').checked,
+                images: document.getElementById('modifyImages').checked,
+                buttons: document.getElementById('modifyButtons').checked,
+                headings: document.getElementById('modifyHeadings').checked
+            }
+        };
+        
+        // Deshabilitar botón y mostrar estado
+        const originalText = aiSubmitBtn.innerHTML;
+        aiSubmitBtn.disabled = true;
+        aiSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Generando...';
+        
+        showStatus('Analizando tu plantilla y generando nuevo contenido con IA...', 'info', true);
+        aiPreviewArea.style.display = 'none';
+        
+        try {
+            const currentTemplateId = window.currentTemplateId || null;
+            
+            const response = await fetch('{{ route("ai.generate") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    template_id: currentTemplateId,
+                    options: options
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message || 'Error desconocido al generar contenido');
+            }
+            
+            // Guardar los cambios generados
+            generatedChanges = data.changes;
+            
+            // Mostrar vista previa de cambios
+            if (generatedChanges && Object.keys(generatedChanges).length > 0) {
+                showChangesPreview(generatedChanges);
+                showStatus(`✅ ¡Contenido generado con éxito! Se han generado ${Object.keys(generatedChanges).reduce((sum, type) => sum + Object.keys(generatedChanges[type] || {}).length, 0)} cambios. Revisa la vista previa.`, 'success', false);
+            } else {
+                showStatus('⚠️ No se detectaron cambios para aplicar. La plantilla puede no tener contenido editable.', 'warning', false);
+            }
+            
+            // Aplicar los cambios automáticamente (opcional, o esperar confirmación)
+            // Aquí puedes elegir si aplicarlos automáticamente o pedir confirmación
+            
+            // Aplicar automáticamente (descomentar si quieres que se aplique inmediatamente)
+            if (data.html && window.editor) {
+                // Limpiar y aplicar el nuevo contenido
+                const cleanHtml = cleanHtmlForGrapesJS(data.html);
+                window.editor.DomComponents.clear();
+                window.editor.addComponents(cleanHtml);
+                showStatus('✅ Cambios aplicados exitosamente en el editor.', 'success', false);
+                
+                // Cerrar modal después de 2 segundos
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(aiModal);
+                    if (modal) modal.hide();
+                    clearForm();
+                }, 2000);
+            }
+            
+        } catch (error) {
+            console.error('Error en generación IA:', error);
+            showStatus(`❌ Error: ${error.message}`, 'danger', false);
+        } finally {
+            aiSubmitBtn.disabled = false;
+            aiSubmitBtn.innerHTML = originalText;
+        }
+    });
+    
+    // Función auxiliar para limpiar HTML
+    function cleanHtmlForGrapesJS(html) {
+        // Eliminar scripts
+        html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+        
+        // Eliminar estilos inline que puedan alterar el diseño (opcional)
+        // html = html.replace(/style="[^"]*"/gi, '');
+        
+        // Asegurar que todas las etiquetas estén cerradas
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        return doc.body.innerHTML;
+    }
+    
+    // Al abrir el modal, limpiar estado anterior
+    aiModal.addEventListener('show.bs.modal', function() {
+        clearForm();
+    });
+});
+</script>
 
 <style>
 /* Estilos para el selector de iconos */
@@ -3109,6 +3228,121 @@ function showStatus(message, type) {
     }, 3000);
 }
 
+// Modal de IA
+document.getElementById('ai-generate-btn').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('aiModal'));
+    modal.show();
+});
+
+// Función para limpiar y formatear HTML
+function cleanHtmlForGrapesJS(html) {
+    // Eliminar scripts maliciosos
+    html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    
+    // Asegurar que todas las etiquetas estén cerradas correctamente
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    return doc.body.innerHTML;
+}
+
+// Envío del prompt al backend (mejorado)
+document.getElementById('aiSubmitBtn').addEventListener('click', async function() {
+    const prompt = document.getElementById('aiPrompt').value.trim();
+    if (!prompt) {
+        alert('Por favor ingresa una descripción de la plantilla.');
+        return;
+    }
+
+    const statusDiv = document.getElementById('aiStatus');
+    const submitBtn = this;
+    const originalText = submitBtn.innerHTML;
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generando...';
+    statusDiv.style.display = 'block';
+    statusDiv.className = 'alert alert-info';
+    statusDiv.innerHTML = '⏳ La IA está analizando tu plantilla y generando nuevo contenido...';
+
+    try {
+        // Obtener el template ID actual
+        const currentTemplateId = window.currentTemplateId || null;
+        
+        const response = await fetch('{{ route("ai.generate") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ 
+                prompt: prompt,
+                template_id: currentTemplateId 
+            })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.message || 'Error desconocido');
+        }
+
+        // Limpiar y aplicar el HTML generado
+        const cleanHtml = cleanHtmlForGrapesJS(data.html);
+        
+        // Guardar la estructura actual antes de modificar (por si se necesita deshacer)
+        window.previousStructure = editor.getComponents();
+        
+        // Limpiar el editor
+        editor.DomComponents.clear();
+        
+        // Aplicar el nuevo contenido manteniendo estilos
+        editor.addComponents(cleanHtml);
+        
+        // Preservar estilos existentes (no los de la IA)
+        const existingStyles = editor.getStyle();
+        
+        // Si la IA devolvió estilos adicionales que no modifican la estructura base
+        if (data.styles && !data.styles.includes('color') && !data.styles.includes('background')) {
+            // Solo agregar estilos que no afecten colores/tipografías
+            editor.setStyle(existingStyles + '\n' + data.styles);
+        }
+
+        statusDiv.className = 'alert alert-success';
+        statusDiv.innerHTML = '✅ ¡Contenido generado con éxito! Se han actualizado textos e imágenes.';
+
+        // Mostrar resumen de cambios
+        if (data.changes && Object.keys(data.changes).length > 0) {
+            const changesSummary = Object.keys(data.changes).map(type => 
+                `${type}: ${Object.keys(data.changes[type]).length} elementos`
+            ).join(', ');
+            statusDiv.innerHTML += `<br><small>📝 Cambios aplicados: ${changesSummary}</small>`;
+        }
+
+        setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('aiModal'));
+            modal.hide();
+            // Limpiar el textarea
+            document.getElementById('aiPrompt').value = '';
+        }, 3000);
+
+    } catch (error) {
+        console.error('Error en generación:', error);
+        statusDiv.className = 'alert alert-danger';
+        statusDiv.innerHTML = '❌ Error: ' + error.message;
+        
+        // Mostrar más detalles si están disponibles
+        if (error.response) {
+            statusDiv.innerHTML += '<br><small>Detalles adicionales disponibles en la consola.</small>';
+        }
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+});
+
 // =============================================
 // INICIALIZACIÓN
 // =============================================
@@ -3128,11 +3362,843 @@ document.getElementById('iconSelectorModal').addEventListener('hide.bs.modal', f
     // Limpiar solo los event listeners de iconos
     editor.off('component:selected.manualIcons');
 });
+
+
+function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+// Dentro del try, después de obtener data.html
+let cleanHtml = data.html;
+
+// 1. Extraer todos los estilos del HTML generado
+const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+let allStyles = '';
+let match;
+while ((match = styleRegex.exec(cleanHtml)) !== null) {
+    allStyles += match[1] + '\n';
+}
+// Eliminar las etiquetas <style> del HTML para que no interfieran
+cleanHtml = cleanHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+
+// 2. Añadir también los estilos que vengan en data.styles (si los hay)
+if (data.styles && data.styles.trim()) {
+    allStyles += '\n' + data.styles;
+}
+
+// 3. Limpiar el editor
+editor.DomComponents.clear();
+editor.CssComposer.clear();
+
+// 4. Cargar los componentes
+const wrapper = editor.DomComponents.getWrapper();
+wrapper.components().reset();
+wrapper.append(cleanHtml);
+
+
+// 5. Aplicar estilos al editor (para que aparezcan en el panel de estilos)
+if (allStyles.trim()) {
+    try {
+        editor.setStyle(allStyles);
+        console.log('✅ Estilos aplicados en el editor');
+    } catch (e) {
+        console.warn('Error aplicando estilos al editor:', e);
+    }
+}
+
+
+
+// 6. Inyectar estilos directamente en el iframe del canvas (para que se vean)
+const iframe = editor.Canvas.getFrameEl();
+if (iframe && iframe.contentDocument) {
+    const iframeDoc = iframe.contentDocument;
+    const styleTag = iframeDoc.createElement('style');
+    styleTag.textContent = allStyles;
+    iframeDoc.head.appendChild(styleTag);
+    console.log('🎨 Estilos inyectados directamente en el iframe');
+}
+
+// 7. Forzar actualización del canvas
+editor.refresh();
+editor.Canvas.render();
+
+// 8. Opcional: si el contenedor principal no tiene alto visible, forzarlo
+setTimeout(() => {
+    const iframe = editor.Canvas.getFrameEl();
+    if (iframe && iframe.contentDocument) {
+        const body = iframe.contentDocument.body;
+        if (body && body.innerHTML.trim() !== '') {
+            // Buscar el primer contenedor y darle un alto mínimo
+            const firstChild = body.firstElementChild;
+            if (firstChild && !firstChild.style.minHeight) {
+                firstChild.style.minHeight = '200px';
+            }
+        }
+    }
+    editor.refresh();
+}, 200);
+
+// Función auxiliar para escapar HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 </script>
 
 
 
   @include($web->template . '.assets-web.assets-grapejs')
+ {{-- Modal IA Sección --}}
+<div class="modal fade" id="aiSectionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,#e6a817,#c98a00);color:white;">
+        <h5 class="modal-title"><i class="bi bi-stars me-2"></i>Editar Sección con IA</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning mb-3">
+          <i class="bi bi-info-circle me-2"></i>
+          <small>Solo se actualizarán textos e imágenes. Los estilos no se modificarán.</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Sección seleccionada:</label>
+          <div id="ai-section-name" class="badge bg-warning text-dark p-2">Ninguna</div>
+        </div>
+        <div class="mb-3">
+          <label for="ai-section-prompt" class="form-label fw-semibold">
+            Describe el negocio o contenido para esta sección
+          </label>
+          <textarea
+            id="ai-section-prompt"
+            class="form-control"
+            rows="4"
+            placeholder="Ejemplo: Tienda de zapatos deportivos para jóvenes, estilo urbano y moderno.">
+          </textarea>
+        </div>
+        <div id="ai-section-status" class="alert" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-warning" id="ai-section-submit-btn">
+          <i class="bi bi-stars me-1"></i> Actualizar Sección
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+
+    // ── Inicializar listeners del editor
+    function initAiSection() {
+        const wrapper = editor.DomComponents.getWrapper();
+
+        editor.on('component:selected', function(component) {
+            if (!component || component === wrapper) return;
+            const btn = document.getElementById('ai-section-btn');
+            if (!btn) return;
+            btn.disabled      = false;
+            btn.style.opacity = '1';
+            btn.title = 'Editar con IA: ' + (
+                component.getName() ||
+                (component.getClasses ? component.getClasses().join(' ') : '') ||
+                component.get('tagName') ||
+                'Sección'
+            );
+            console.log('✅ Componente seleccionado:', btn.title);
+        });
+
+        editor.on('component:deselected', function() {
+            const btn = document.getElementById('ai-section-btn');
+            if (!btn) return;
+            btn.disabled      = true;
+            btn.style.opacity = '0.6';
+            btn.title         = 'Selecciona una sección primero';
+        });
+
+        console.log('✅ AI Sección inicializado');
+    }
+
+    // Inicializar con fallbacks
+    if (typeof editor !== 'undefined') {
+        if (editor.getModel && editor.getModel().get('ready')) {
+            initAiSection();
+        } else {
+            editor.on('load', initAiSection);
+            setTimeout(initAiSection, 1000);
+        }
+    }
+
+    // ── Abrir modal
+    document.getElementById('ai-section-btn').addEventListener('click', function() {
+        const selected = editor.getSelected();
+        if (!selected) {
+            alert('Selecciona una sección en el editor primero.\nHaz clic sobre cualquier sección de la página.');
+            return;
+        }
+        const name = selected.getName() ||
+                     (selected.getClasses ? selected.getClasses().join(' ') : '') ||
+                     selected.get('tagName') ||
+                     'Sección';
+
+        document.getElementById('ai-section-name').textContent    = name;
+        document.getElementById('ai-section-prompt').value         = '';
+        document.getElementById('ai-section-status').style.display = 'none';
+
+        new bootstrap.Modal(document.getElementById('aiSectionModal')).show();
+    });
+
+    // ── Reemplazar texto en el DOM
+    function replaceTextInElement(element, originalText, newText) {
+        if (!element) return 0;
+
+        let count = 0;
+        const orig = originalText.trim();
+
+        // Método 1: TreeWalker — nodos de texto exactos
+        try {
+            const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+            const nodes  = [];
+            let node;
+            while ((node = walker.nextNode())) {
+                if (node.textContent.trim() === orig) nodes.push(node);
+            }
+            nodes.forEach(n => { n.textContent = newText; count++; });
+        } catch(e) {}
+
+        if (count > 0) return count;
+
+        // Método 2: elementos sin hijos — comparación exacta
+        try {
+            element.querySelectorAll(
+                'h1,h2,h3,h4,h5,h6,p,span,a,li,button,label,td,th,strong,em,small'
+            ).forEach(el => {
+                if (el.children.length === 0 && el.textContent.trim() === orig) {
+                    el.textContent = newText;
+                    count++;
+                }
+            });
+        } catch(e) {}
+
+        if (count > 0) return count;
+
+        // Método 3: comparación sin espacios (textos concatenados)
+        try {
+            const origNoSpace = orig.replace(/\s+/g, '').toLowerCase();
+            element.querySelectorAll(
+                'h1,h2,h3,h4,h5,h6,p,span,a,li,button,label,td,th,strong,em,small'
+            ).forEach(el => {
+                const elText = el.textContent.trim();
+                if (el.children.length === 0 &&
+                    elText.replace(/\s+/g, '').toLowerCase() === origNoSpace) {
+                    el.textContent = newText;
+                    count++;
+                }
+            });
+        } catch(e) {}
+
+        if (count > 0) return count;
+
+        // Método 4: el original contiene el texto del elemento
+        try {
+            element.querySelectorAll(
+                'h1,h2,h3,h4,h5,h6,p,span,a,li,button,label,td,th,strong,em,small'
+            ).forEach(el => {
+                const elText = el.textContent.trim();
+                if (el.children.length === 0 && elText.length > 2 &&
+                    orig.replace(/\s+/g, ' ').includes(elText)) {
+                    el.textContent = newText;
+                    count++;
+                }
+            });
+        } catch(e) {}
+
+        if (count > 0) return count;
+
+        // Método 5: innerHTML replace — último recurso
+        try {
+            const escaped = orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex   = new RegExp(escaped, 'g');
+            if (regex.test(element.innerHTML)) {
+                element.innerHTML = element.innerHTML.replace(regex, newText);
+                count++;
+            }
+        } catch(e) {}
+
+        return count;
+    }
+
+    // ── Sincronizar DOM con modelos GrapesJS para que el guardado funcione
+    function syncDomToGrapesJS(selected, el) {
+        try {
+            const rootClasses = Array.from(el.classList).filter(c => !c.startsWith('gjs-'));
+            const rootId      = el.id || '';
+            const updatedInner = el.innerHTML;
+
+            selected.components().reset();
+            selected.append(updatedInner);
+
+            rootClasses.forEach(cls => {
+                try { selected.addClass(cls); } catch(e) {}
+            });
+
+            if (rootId) {
+                try { selected.addAttributes({ id: rootId }); } catch(e) {}
+            }
+
+            editor.refresh();
+            console.log('✅ GrapesJS sincronizado');
+            return true;
+        } catch(e) {
+            console.warn('⚠️ Sync GrapesJS error:', e.message);
+            return false;
+        }
+    }
+
+    // ── Procesar con IA
+    document.getElementById('ai-section-submit-btn').addEventListener('click', async function() {
+        const prompt   = document.getElementById('ai-section-prompt').value.trim();
+        const selected = editor.getSelected();
+        const status   = document.getElementById('ai-section-status');
+        const btn      = this;
+        const origHtml = btn.innerHTML;
+
+        if (!prompt) { alert('Por favor describe el contenido para esta sección.'); return; }
+        if (!selected) { alert('No hay sección seleccionada.'); return; }
+
+        // ── Obtener HTML de la sección
+        let sectionHtml = '';
+        try {
+            if (selected.view && selected.view.el) {
+                sectionHtml = selected.view.el.outerHTML;
+            }
+        } catch(e) {}
+
+        if (!sectionHtml) {
+            try { sectionHtml = editor.getHtml({ component: selected }); } catch(e) {}
+        }
+
+        if (!sectionHtml || !sectionHtml.trim()) {
+            status.className     = 'alert alert-danger';
+            status.innerHTML     = '❌ No se pudo leer el HTML de la sección.';
+            status.style.display = 'block';
+            return;
+        }
+
+        // ── UI de carga
+        btn.disabled         = true;
+        btn.innerHTML        = '<span class="spinner-border spinner-border-sm me-1"></span>Procesando...';
+        status.className     = 'alert alert-info';
+        status.innerHTML     = '⏳ La IA está procesando... puede tardar hasta 30 segundos.';
+        status.style.display = 'block';
+
+        try {
+            const response = await fetch('{{ route("ai.section.generate") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ prompt, section: sectionHtml })
+            });
+
+            const data = await response.json();
+
+            if (!data.success) throw new Error(data.message || 'Error desconocido');
+
+            if (!data.replacements || data.replacements.length === 0) {
+                status.className = 'alert alert-warning';
+                status.innerHTML = '⚠️ La IA no encontró textos o imágenes para actualizar.';
+                return;
+            }
+
+            console.log('📦 Reemplazos recibidos:', data.replacements.length, data.replacements);
+
+            const el = selected.view && selected.view.el ? selected.view.el : null;
+            if (!el) throw new Error('No se puede acceder al elemento del componente.');
+
+            let textsApplied  = 0;
+            let imagesApplied = 0;
+
+            // ── Separar por tipo
+            const textReps  = data.replacements.filter(r => r.type === 'text');
+            const imageReps = data.replacements.filter(r => r.type === 'image');
+
+            // ── Aplicar textos
+            textReps.forEach(rep => {
+                if (!rep.original || !rep.new) return;
+                console.log(`🔍 Buscando texto: "${rep.original}"`);
+                const changed = replaceTextInElement(el, rep.original, rep.new);
+                textsApplied += changed;
+                if (changed > 0) {
+                    console.log(`✅ Texto (${changed}x): "${rep.original}" → "${rep.new}"`);
+                } else {
+                    console.warn(`⚠️ No encontrado: "${rep.original}"`);
+                    const available = [];
+                    el.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,a,li,button,strong,em').forEach(n => {
+                        if (n.children.length === 0 && n.textContent.trim()) {
+                            available.push('"' + n.textContent.trim() + '"');
+                        }
+                    });
+                    console.log('Textos disponibles:', available.slice(0, 8).join(', '));
+                }
+            });
+
+            // ── Aplicar imágenes por índice
+            if (imageReps.length > 0) {
+                const allImgs = el.querySelectorAll('img');
+                console.log(`🖼️ Imágenes en DOM: ${allImgs.length}, reemplazos: ${imageReps.length}`);
+
+                imageReps.forEach((rep, repIndex) => {
+                    if (!rep.new) return;
+
+                    // Prioridad 1: reemplazar por índice exacto del backend
+                    const targetIndex = rep.index !== undefined ? rep.index : repIndex;
+                    const imgByIndex  = allImgs[targetIndex];
+
+                    if (imgByIndex) {
+                        imgByIndex.setAttribute('src', rep.new);
+                        imgByIndex.style.opacity = '0';
+                        setTimeout(() => { imgByIndex.style.opacity = '1'; }, 150);
+                        imagesApplied++;
+                        console.log(`✅ Imagen [${targetIndex}] por índice: ${rep.new}`);
+                        return;
+                    }
+
+                    // Prioridad 2: buscar por src exacto
+                    let replaced = false;
+                    allImgs.forEach(img => {
+                        if (!replaced) {
+                            const src = img.getAttribute('src') || '';
+                            if (src === rep.original || img.src === rep.original) {
+                                img.setAttribute('src', rep.new);
+                                imagesApplied++;
+                                replaced = true;
+                                console.log(`✅ Imagen (src exacto): ${rep.new}`);
+                            }
+                        }
+                    });
+
+                    // Prioridad 3: primer placeholder SVG disponible
+                    if (!replaced) {
+                        allImgs.forEach(img => {
+                            if (!replaced) {
+                                const src = img.getAttribute('src') || '';
+                                if (src.startsWith('data:image/svg') || src === '') {
+                                    img.setAttribute('src', rep.new);
+                                    imagesApplied++;
+                                    replaced = true;
+                                    console.log(`✅ Imagen (placeholder SVG): ${rep.new}`);
+                                }
+                            }
+                        });
+                    }
+
+                    if (!replaced) {
+                        console.warn(`⚠️ Imagen no pudo aplicarse: ${rep.new}`);
+                    }
+                });
+            }
+
+            console.log(`📊 Resultado: ${textsApplied} textos, ${imagesApplied} imágenes`);
+
+            if (textsApplied === 0 && imagesApplied === 0) {
+                status.className = 'alert alert-warning';
+                status.innerHTML = `⚠️ Se recibieron ${data.replacements.length} reemplazos pero no coincidieron. Revisa la consola (F12).`;
+                return;
+            }
+
+            // ── Sincronizar DOM → modelos GrapesJS para que el guardado funcione
+            status.innerHTML = '⏳ Sincronizando con el editor...';
+            const synced = syncDomToGrapesJS(selected, el);
+
+            if (synced) {
+                status.className = 'alert alert-success';
+                status.innerHTML = `✅ ¡Listo! ${textsApplied} texto${textsApplied !== 1 ? 's' : ''} y ${imagesApplied} imagen${imagesApplied !== 1 ? 'es' : ''} actualizados. Guarda para conservar los cambios.`;
+            } else {
+                status.className = 'alert alert-warning';
+                status.innerHTML = `✅ Textos e imágenes actualizados en pantalla. Guarda manualmente.`;
+            }
+
+            setTimeout(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('aiSectionModal'));
+                if (modal) modal.hide();
+            }, 3000);
+
+        } catch(error) {
+            console.error('Error IA Sección:', error);
+            status.className = 'alert alert-danger';
+            status.innerHTML = '❌ ' + error.message;
+        } finally {
+            btn.disabled  = false;
+            btn.innerHTML = origHtml;
+            setTimeout(() => { status.style.display = 'none'; }, 8000);
+        }
+    });
+
+})();
+</script>
+
+
+{{-- Modal IA Template Completo --}}
+<div class="modal fade" id="aiTemplateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,#6f42c1,#5a32a3);color:white;">
+        <h5 class="modal-title"><i class="bi bi-stars me-2"></i>Editar Template Completo con IA</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info mb-3">
+          <i class="bi bi-info-circle me-2"></i>
+          <small>La IA actualizará <strong>todos los textos e imágenes</strong> del template según tu descripción. Los estilos, colores y estructura no se modificarán.</small>
+        </div>
+        <div class="mb-3">
+          <label for="ai-template-prompt" class="form-label fw-semibold">
+            Describe el negocio o contenido del template
+          </label>
+          <textarea
+            id="ai-template-prompt"
+            class="form-control"
+            rows="5"
+            placeholder="Ejemplo: Restaurante italiano de alta cocina en Madrid, especialidad en pastas artesanales y vinos importados. Ambiente elegante y romántico para parejas.">
+          </textarea>
+          <div class="form-text mt-1">
+            <i class="bi bi-lightbulb"></i> Mientras más detallado, mejores resultados.
+          </div>
+        </div>
+
+        {{-- Progreso --}}
+        <div id="ai-template-progress" style="display:none;">
+          <div class="d-flex justify-content-between mb-1">
+            <small class="fw-semibold" id="ai-template-progress-label">Procesando...</small>
+            <small id="ai-template-progress-pct">0%</small>
+          </div>
+          <div class="progress mb-3" style="height:8px;">
+            <div id="ai-template-progress-bar"
+                 class="progress-bar progress-bar-striped progress-bar-animated bg-purple"
+                 style="width:0%;background:#6f42c1;"></div>
+          </div>
+        </div>
+
+        <div id="ai-template-status" class="alert" style="display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-purple" id="ai-template-submit-btn">
+          <i class="bi bi-stars me-1"></i> Generar Template
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+
+    // ── Abrir modal desde botón "Generar con IA"
+    const generateBtn = document.getElementById('ai-generate-btn');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
+            document.getElementById('ai-template-prompt').value          = '';
+            document.getElementById('ai-template-status').style.display  = 'none';
+            document.getElementById('ai-template-progress').style.display = 'none';
+            setProgress(0, '');
+            new bootstrap.Modal(document.getElementById('aiTemplateModal')).show();
+        });
+    }
+
+    // ── Barra de progreso
+    function setProgress(pct, label) {
+        const bar   = document.getElementById('ai-template-progress-bar');
+        const lbl   = document.getElementById('ai-template-progress-label');
+        const pctEl = document.getElementById('ai-template-progress-pct');
+        if (bar)   bar.style.width   = pct + '%';
+        if (lbl)   lbl.textContent   = label;
+        if (pctEl) pctEl.textContent = pct + '%';
+    }
+
+    // ── Reemplazar texto en el DOM
+    function replaceTextInElement(element, originalText, newText) {
+        if (!element) return 0;
+
+        let count = 0;
+        const orig = originalText.trim();
+
+        // Método 1: TreeWalker — nodos de texto exactos
+        try {
+            const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+            const nodes  = [];
+            let node;
+            while ((node = walker.nextNode())) {
+                if (node.textContent.trim() === orig) nodes.push(node);
+            }
+            nodes.forEach(n => { n.textContent = newText; count++; });
+        } catch(e) {}
+
+        if (count > 0) return count;
+
+        // Método 2: elementos sin hijos — comparación exacta
+        try {
+            element.querySelectorAll(
+                'h1,h2,h3,h4,h5,h6,p,span,a,li,button,label,td,th,strong,em,small'
+            ).forEach(el => {
+                if (el.children.length === 0 && el.textContent.trim() === orig) {
+                    el.textContent = newText;
+                    count++;
+                }
+            });
+        } catch(e) {}
+
+        if (count > 0) return count;
+
+        // Método 3: sin espacios (textos concatenados)
+        try {
+            const origNoSpace = orig.replace(/\s+/g, '').toLowerCase();
+            element.querySelectorAll(
+                'h1,h2,h3,h4,h5,h6,p,span,a,li,button,label,td,th,strong,em,small'
+            ).forEach(el => {
+                const elText = el.textContent.trim();
+                if (el.children.length === 0 &&
+                    elText.replace(/\s+/g, '').toLowerCase() === origNoSpace) {
+                    el.textContent = newText;
+                    count++;
+                }
+            });
+        } catch(e) {}
+
+        if (count > 0) return count;
+
+        // Método 4: el original contiene el texto del elemento
+        try {
+            element.querySelectorAll(
+                'h1,h2,h3,h4,h5,h6,p,span,a,li,button,label,td,th,strong,em,small'
+            ).forEach(el => {
+                const elText = el.textContent.trim();
+                if (el.children.length === 0 && elText.length > 2 &&
+                    orig.replace(/\s+/g, ' ').includes(elText)) {
+                    el.textContent = newText;
+                    count++;
+                }
+            });
+        } catch(e) {}
+
+        return count;
+    }
+
+    // ── Obtener el elemento raíz del canvas de GrapesJS
+    function getCanvasBody() {
+        try {
+            const iframe = document.querySelector('.gjs-frame');
+            if (iframe) {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                return doc.body || null;
+            }
+        } catch(e) {}
+        return null;
+    }
+
+    // ── Procesar template completo
+    document.getElementById('ai-template-submit-btn').addEventListener('click', async function() {
+        const prompt = document.getElementById('ai-template-prompt').value.trim();
+        const status = document.getElementById('ai-template-status');
+        const btn    = this;
+        const origHtml = btn.innerHTML;
+
+        if (!prompt || prompt.length < 10) {
+            alert('Por favor describe el negocio con más detalle (mínimo 10 caracteres).');
+            return;
+        }
+
+        // ── Obtener HTML completo del canvas
+        let fullHtml = '';
+        try {
+            const canvasBody = getCanvasBody();
+            if (canvasBody) {
+                fullHtml = canvasBody.innerHTML;
+                console.log('✅ HTML completo del canvas:', fullHtml.length, 'chars');
+            }
+        } catch(e) { console.warn('Error obteniendo HTML:', e.message); }
+
+        if (!fullHtml || !fullHtml.trim()) {
+            status.className     = 'alert alert-danger';
+            status.innerHTML     = '❌ No se pudo leer el contenido del template. Asegúrate de tener contenido en el editor.';
+            status.style.display = 'block';
+            return;
+        }
+
+        // ── UI de carga
+        btn.disabled    = true;
+        btn.innerHTML   = '<span class="spinner-border spinner-border-sm me-1"></span>Procesando...';
+        status.style.display   = 'none';
+        const progressDiv = document.getElementById('ai-template-progress');
+        progressDiv.style.display = 'block';
+        setProgress(10, 'Analizando el template...');
+
+        try {
+            setProgress(20, 'Enviando a la IA...');
+
+            const response = await fetch('{{ route("ai.template.generate") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ prompt, html: fullHtml })
+            });
+
+            setProgress(60, 'IA procesando textos e imágenes...');
+
+            const data = await response.json();
+
+            if (!data.success) throw new Error(data.message || 'Error desconocido');
+
+            if (!data.replacements || data.replacements.length === 0) {
+                status.className     = 'alert alert-warning';
+                status.innerHTML     = '⚠️ La IA no encontró textos o imágenes para actualizar.';
+                status.style.display = 'block';
+                progressDiv.style.display = 'none';
+                return;
+            }
+
+            console.log('📦 Reemplazos recibidos:', data.replacements.length);
+            setProgress(80, 'Aplicando cambios al template...');
+
+            // ── Obtener el body del canvas para aplicar cambios
+            const canvasBody = getCanvasBody();
+            if (!canvasBody) throw new Error('No se puede acceder al canvas del editor.');
+
+            const textReps  = data.replacements.filter(r => r.type === 'text');
+            const imageReps = data.replacements.filter(r => r.type === 'image');
+
+            let textsApplied  = 0;
+            let imagesApplied = 0;
+
+            // ── Aplicar textos
+            textReps.forEach(rep => {
+                if (!rep.original || !rep.new) return;
+                const changed = replaceTextInElement(canvasBody, rep.original, rep.new);
+                textsApplied += changed;
+                if (changed > 0) {
+                    console.log(`✅ Texto: "${rep.original}" → "${rep.new}"`);
+                } else {
+                    console.warn(`⚠️ No encontrado: "${rep.original}"`);
+                }
+            });
+
+            // ── Aplicar imágenes por índice
+            if (imageReps.length > 0) {
+                const allImgs = canvasBody.querySelectorAll('img');
+                console.log(`🖼️ Imágenes en canvas: ${allImgs.length}, reemplazos: ${imageReps.length}`);
+
+                imageReps.forEach((rep, repIndex) => {
+                    if (!rep.new) return;
+
+                    const targetIndex = rep.index !== undefined ? rep.index : repIndex;
+                    const imgByIndex  = allImgs[targetIndex];
+
+                    if (imgByIndex) {
+                        imgByIndex.setAttribute('src', rep.new);
+                        imgByIndex.style.opacity = '0';
+                        setTimeout(() => { imgByIndex.style.opacity = '1'; }, 150);
+                        imagesApplied++;
+                        console.log(`✅ Imagen [${targetIndex}]: ${rep.new}`);
+                        return;
+                    }
+
+                    // Fallback por src exacto
+                    let replaced = false;
+                    allImgs.forEach(img => {
+                        if (!replaced) {
+                            const src = img.getAttribute('src') || '';
+                            if (src === rep.original || img.src === rep.original) {
+                                img.setAttribute('src', rep.new);
+                                imagesApplied++;
+                                replaced = true;
+                            }
+                        }
+                    });
+
+                    // Fallback por placeholder SVG
+                    if (!replaced) {
+                        allImgs.forEach(img => {
+                            if (!replaced) {
+                                const src = img.getAttribute('src') || '';
+                                if (src.startsWith('data:image/svg') || src === '') {
+                                    img.setAttribute('src', rep.new);
+                                    imagesApplied++;
+                                    replaced = true;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            console.log(`📊 Resultado: ${textsApplied} textos, ${imagesApplied} imágenes`);
+            setProgress(90, 'Sincronizando con el editor...');
+
+            // ── Sincronizar DOM con modelos GrapesJS
+            if (textsApplied > 0 || imagesApplied > 0) {
+                try {
+                    const updatedHtml = canvasBody.innerHTML;
+                    const wrapper     = editor.DomComponents.getWrapper();
+
+                    // Limpiar y recargar con el HTML actualizado
+                    editor.DomComponents.clear();
+                    editor.CssComposer.clear();
+                    editor.setComponents(updatedHtml);
+                    editor.refresh();
+
+                    console.log('✅ Editor sincronizado con nuevo contenido');
+                } catch(e) {
+                    console.warn('⚠️ Sync error:', e.message);
+                }
+            }
+
+            setProgress(100, '¡Listo!');
+
+            if (textsApplied === 0 && imagesApplied === 0) {
+                status.className = 'alert alert-warning';
+                status.innerHTML = `⚠️ Se recibieron ${data.replacements.length} reemplazos pero no coincidieron con el DOM.`;
+            } else {
+                status.className = 'alert alert-success';
+                status.innerHTML = `✅ ¡Template actualizado! ${textsApplied} texto${textsApplied !== 1 ? 's' : ''} y ${imagesApplied} imagen${imagesApplied !== 1 ? 'es' : ''} modificados. Presiona <strong>Guardar</strong> para conservar los cambios.`;
+            }
+
+            status.style.display = 'block';
+
+            setTimeout(() => {
+                progressDiv.style.display = 'none';
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('aiTemplateModal'));
+                    if (modal) modal.hide();
+                }, 3000);
+            }, 500);
+
+        } catch(error) {
+            console.error('Error IA Template:', error);
+            status.className     = 'alert alert-danger';
+            status.innerHTML     = '❌ ' + error.message;
+            status.style.display = 'block';
+            document.getElementById('ai-template-progress').style.display = 'none';
+        } finally {
+            btn.disabled  = false;
+            btn.innerHTML = origHtml;
+        }
+    });
+
+})();
+</script>
 </body>
 </html>
 
