@@ -95,6 +95,11 @@
       "url": "{{ $seo_web->og_url ?? url()->current() }}"
     }
     </script>
+
+    <style>
+     {!! $styles !!}
+    </style>
+    
      @include('genericos.mensaje')
 
 </head>
