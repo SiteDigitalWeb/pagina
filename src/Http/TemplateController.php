@@ -262,7 +262,6 @@ private function renderScripts(array $scriptsArray): string
 private function renderStyles(array $stylesArray): string
 {
     $css = '';
-
     foreach ($stylesArray as $styleBlock) {
         if (
             !isset($styleBlock['selectors'], $styleBlock['style']) ||
@@ -275,25 +274,39 @@ private function renderStyles(array $stylesArray): string
 
         $selectors = $styleBlock['selectors'];
 
-        // Si el bloque tiene background-image y solo son clases → combinamos
-        if (isset($styleBlock['style']['background-image']) && !empty($selectors)) {
-            $allClassesArePlain = true;
-            foreach ($selectors as $sel) {
-                if (strpos($sel, '#') === 0) {
-                    $allClassesArePlain = false;
-                    break;
+        // Normalizar cada selector
+        $normalizedSelectors = array_map(function ($sel) {
+            // Si es array (GrapesJS a veces guarda objetos con 'name' y 'type')
+            if (is_array($sel)) {
+                $name = $sel['name'] ?? '';
+                $type = $sel['type'] ?? 1; // type 1 = clase, type 2 = id
+                if ($type === 2 || strpos($name, '#') === 0) {
+                    return strpos($name, '#') === 0 ? $name : '#' . $name;
                 }
+                return strpos($name, '.') === 0 ? $name : '.' . $name;
             }
-            if ($allClassesArePlain) {
-                // Limpieza de slashes
-                $styleBlock['style']['background-image'] = str_replace('\/', '/', $styleBlock['style']['background-image']);
-                // Crear selector único con todas las clases juntas
-                $selectors = ['.' . implode('.', $selectors)];
+
+            // Si es string
+            if (strpos($sel, '#') === 0) {
+                return $sel; // ya es ID
             }
+            if (strpos($sel, '.') === 0) {
+                return $sel; // ya tiene punto
+            }
+            if (strpos($sel, ':') !== false || strpos($sel, ' ') !== false) {
+                return $sel; // pseudo-selector o selector compuesto, no tocar
+            }
+            // Es una clase sin punto → agregarle el punto
+            return '.' . $sel;
+
+        }, $selectors);
+
+        // Manejo especial de background-image
+        if (isset($styleBlock['style']['background-image'])) {
+            $styleBlock['style']['background-image'] = str_replace('\/', '/', $styleBlock['style']['background-image']);
         }
 
-        $selectors = implode(', ', $selectors);
-
+        $selectorString = implode(', ', $normalizedSelectors);
         $styleRules = '';
         foreach ($styleBlock['style'] as $property => $value) {
             if (stripos($property, 'background-image') !== false) {
@@ -302,9 +315,8 @@ private function renderStyles(array $stylesArray): string
             $styleRules .= "$property: $value; ";
         }
 
-        $css .= "$selectors { $styleRules }\n";
+        $css .= "$selectorString { $styleRules }\n";
     }
-
     return $css;
 }
 

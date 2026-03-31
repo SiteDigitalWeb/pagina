@@ -23,7 +23,7 @@ Route::get('seo', 'Sitedigitalweb\Pagina\Http\ConfiguracionController@seo');
 Route::get('/smtp', [Sitedigitalweb\Pagina\Http\SmtpConfigController::class, 'index'])->name('smtp.index');
 Route::post('/smtp', [Sitedigitalweb\Pagina\Http\SmtpConfigController::class, 'store'])->name('smtp.store');
 Route::post('/smtp/test', [Sitedigitalweb\Pagina\Http\SmtpConfigController::class, 'sendTestMail'])->name('smtp.test');
-
+Route::post('/tenants', [Sitedigitalweb\Pagina\Http\TenantController::class, 'store'])->name('tenants.store');
 Route::resource('country', \Sitedigitalweb\Pagina\Http\CountyController::class)->names('ge.embudo');
 Route::resource('pages', 'Sitedigitalweb\Pagina\Http\PaginaController');
 Route::get('create-page', 'Sitedigitalweb\Pagina\Http\PaginaController@show');
@@ -211,7 +211,7 @@ Route::post('/push/send', [Sitedigitalweb\Pagina\Http\PushNotificationController
 
 
 Route::group(['middleware' => ['web']], function (){
-Route::post('/tenants', [Sitedigitalweb\Pagina\Http\TenantController::class, 'store'])->name('tenants.store');
+
 Route::post('/whatsapp-track', [DigitalsiteSaaS\Pagina\Http\WebController::class, 'trackClick'])->name('whatsapp.track');
 Route::get('robots.txt', 'DigitalsiteSaaS\Pagina\Http\WebController@robot');
 
