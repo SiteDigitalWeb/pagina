@@ -228,7 +228,7 @@ class ConfiguracionController extends Controller
     public function updateseo(Request $request)
 {
     $model = $this->tenantName
-        ? \DigitalsiteSaaS\Pagina\Tenant\Cms_seo::class
+        ? \Sitedigitalweb\Pagina\Tenant\Cms_seo::class
         : Cms_seo::class;
 
     $contenido = $model::findOrFail(1);
