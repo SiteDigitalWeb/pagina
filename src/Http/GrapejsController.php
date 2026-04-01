@@ -447,22 +447,36 @@ public function getComponents()
     }));
 }
 
-    public function store(Request $request){
-     $request->validate([
-     'name' => 'required|string|max:255',
-     'content' => 'required|string'
-     ]);
+      public function store(Request $request)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'content' => 'required|string'
+    ]);
+    
+    // Obtém o tenant atual de forma mais limpa
+    $tenant = app(\Hyn\Tenancy\Environment::class)->tenant();
+    
+    // Define a classe do modelo baseada no tenant
+    $modelClass = $tenant 
+        ? \Sitedigitalweb\Pagina\Tenant\Cms_SavedComponent::class 
+        : Cms_SavedComponent::class;
+    
+    // Cria o componente usando array fillable
+    $component = new $modelClass([
+        'label' => $request->input('name'),
+        'content' => $request->input('content'),
+        'category' => 'Componentes Guardados'
+    ]);
+    
+    $component->save();
+    
+    return response()->json([
+        'success' => true,
+        'component' => $component
+    ]);
+}
 
-     $component = new Cms_SavedComponent();
-     $component->label = $request->input('name');
-     $component->content = $request->input('content');
-     $component->category = 'Componentes Guardados';
-     $component->save();
-
-      return response()->json(['success' => true]);
-     }
-
-     
 
      public function funel(){
     
