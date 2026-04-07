@@ -48,6 +48,7 @@ public function preview($id)
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
         $seo_web = \Sitedigitalweb\Pagina\Tenant\Cms_seo::first();
+        $productos_online = \Sitedigitalweb\Carrito\Tenant\Cms_producto::all();
         $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
         ->where('visibility', 1)
         ->orderBy('position', 'asc')
@@ -93,7 +94,7 @@ public function preview($id)
     $templateFolder = $web->template ?? 'default';
 
     // Render dinámico de la vista
-    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo','seo_web'));
+    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo','seo_web','productos_online'));
 }
 
 
