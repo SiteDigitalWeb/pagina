@@ -61,6 +61,7 @@ public function preview($id)
         $template = Page::findOrFail($id);
         $recaptcha = Cms_Recaptcha::first();
         $web = Cms_Template::first();
+        $productos_online = Cms_producto::all();
         $seo_web = Cms_seo::first();
         $menuPages = Page::whereNull('page_id')
         ->where('visibility', 1)
@@ -106,6 +107,7 @@ public function page()
         $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', '/')->firstOrFail();
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
         $seo_web = \Sitedigitalweb\Pagina\Tenant\Cms_seo::first();
+        $productos_online = \Sitedigitalweb\Carrito\Tenant\Cms_producto::all();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
         $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
         ->where('visibility', 1)
@@ -120,6 +122,7 @@ public function page()
         $template = Page::where('slug', '/')->firstOrFail();
         $recaptcha = Cms_Recaptcha::first();
         $seo_web = Cms_seo::first();
+        $productos_online = Cms_producto::all();
         $web = Cms_Template::first();
         $menuPages = Page::whereNull('page_id')
         ->where('visibility', 1)
@@ -152,7 +155,7 @@ public function page()
     // Suponiendo que en cms_template tienes una columna 'template_name'
     $templateFolder = $web->template ?? 'default';
 
-    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web'));
+    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web','productos_online'));
 
 }
 
@@ -190,6 +193,7 @@ public function pages($page)
         $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', $page)->firstOrFail();
         $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
         $seo_web = \Sitedigitalweb\Pagina\Tenant\Cms_seo::first();
+        $productos_online = \Sitedigitalweb\Carrito\Tenant\Cms_producto::all();
         $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
         $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
         ->where('visibility', 1)
@@ -204,6 +208,7 @@ public function pages($page)
         $template = Page::where('slug', $page)->firstOrFail();
         $recaptcha = Cms_Recaptcha::first();
         $seo_web = Cms_seo::first();
+        $productos_online = Cms_producto::all();
         $web = Cms_Template::first();
         $menuPages = Page::whereNull('page_id')
         ->where('visibility', 1)
@@ -229,7 +234,7 @@ public function pages($page)
         'url'         => url()->current(),
     ];
     $templateFolder = $web->template ?? 'default';
-    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web'));
+    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web','productos_online'));
 }
 
 private function renderScripts(array $scriptsArray): string
