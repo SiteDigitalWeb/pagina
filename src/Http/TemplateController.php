@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Schema;
 use Sitedigitalweb\Pagina\Cms_theme;
 use Sitedigitalweb\Pagina\Cms_variable;
 use Sitedigitalweb\Pagina\Cms_seo;
+use Sitedigitalweb\Carrito\Cms_producto;
 use DB;
 use File;
 
