@@ -115,11 +115,6 @@
   Esta plantilla no contiene ningún contenido aún.
  </div>
 @endif
-@foreach($productos_online as $productos_online)
-<ul>
- <li>{{$productos_online->name}} <a href="/cart/add/{{$productos_online->slug}}">agregar</a></li>
-</ul>
-@endforeach
 
 <script defer>{!! $scripts !!}</script>
 @include('genericos.estadistica')
