@@ -2,15 +2,19 @@
 
 namespace Sitedigitalweb\Pagina;
 use Illuminate\Database\Eloquent\Model;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant; // ← esta línea faltaba
 
 class Page extends Model
 {
-  
+  use BelongsToTenant; // ← agregar
+
  protected $table = 'cms_pages';
 
  protected $fillable = [
+        'tenant_id',  // ← agregar
         'page', // Agrega esto junto con los demás campos asignables
         'slug',
+        'slugcon',
         'title',
         'description',
         'keywords',

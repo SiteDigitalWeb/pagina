@@ -1,31 +1,35 @@
 <?php
-namespace Sitedigitalweb\Pagina;
+
+namespace Sitedigitalweb\Pagina\Tenant;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 
-class Cms_Template extends Model
+class Cms_departamento extends Model
 {
-    protected $table = 'cms_templates';
+    protected $table = 'cms_departamentos';
 
     protected $fillable = [
         'tenant_id',
-        'template',
-        'description',
-        'image',
-        'url',
+        'departamento',
+        'pais_id',
     ];
 
-    // Scope que retorna plantillas del tenant actual + plantillas globales
+    // Retorna globales + propios del tenant
     protected static function booted(): void
     {
         static::addGlobalScope('tenant_or_global', function (Builder $builder) {
             if (tenancy()->initialized) {
                 $builder->where(function ($q) {
                     $q->where('tenant_id', tenant('id'))
-                      ->orWhereNull('tenant_id'); // ← incluye plantillas globales
+                      ->orWhereNull('tenant_id');
                 });
             }
         });
+    }
+
+    public function pais()
+    {
+        return $this->belongsTo(Cms_pais::class, 'pais_id');
     }
 }

@@ -2,22 +2,18 @@
 
 namespace Sitedigitalweb\Pagina\Tenant;
 
-use Hyn\Tenancy\Traits\UsesTenantConnection;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Cms_Recaptcha extends Model
 {
-    use UsesTenantConnection;
-    protected $table = 'cms_recaptcha'; // o el nombre real de tu tabla
- 
+    use BelongsToTenant;
+
+    protected $table = 'cms_recaptcha';
+
     protected $fillable = [
+        'tenant_id',
         'site_key',
         'secret_key',
     ];
 }
-
-
-
-

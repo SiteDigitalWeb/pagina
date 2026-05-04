@@ -20,29 +20,26 @@
  use Illuminate\Support\Str;
  use Illuminate\Filesystem\Filesystem;
  use Illuminate\Http\Request;
- use Hyn\Tenancy\Models\Hostname;
- use Hyn\Tenancy\Models\Website;
- use Hyn\Tenancy\Repositories\HostnameRepository;
- use Hyn\Tenancy\Repositories\WebsiteRepository;
  use Carbon\Carbon;
  use Hash;
  use GuzzleHttp\Client;
- use App\Http\Requests\StorePageRequest;
+ use Sitedigitalweb\Pagina\Http\Requests\StorePageRequest;
 
  class PaginaController extends Controller{
 
-protected $tenantName = null;
+protected ?string $tenantName = null;
+protected bool $isTenant = false;
 
- public function __construct(){
-  $this->middleware('auth');
+public function __construct()
+{
+ 
 
-  $hostname = app(\Hyn\Tenancy\Environment::class)->hostname();
-        if ($hostname){
-            $fqdn = $hostname->fqdn;
-            $this->tenantName = explode(".", $fqdn)[0];
-        }
-
- }
+    // ✅ Stancl Tenancy
+    if (tenancy()->initialized) {
+        $this->isTenant   = true;
+        $this->tenantName = tenant('id');
+    }
+}
 
 public function index()
 {
@@ -70,8 +67,9 @@ public function show()
 }
 
 
-public function create(StorePageRequest $request)
+public function store(StorePageRequest $request)
 {
+
     try {
         $validated = $request->validated();
         $idioma = $request->input('language'); // Cambiado de 'idioma' a 'language' para coincidir con las reglas
@@ -94,12 +92,10 @@ public function create(StorePageRequest $request)
             'page_id' => $request->input('page_id'),
         ];
 
-        if (!$this->tenantName) {
-            $pagina = Page::create($pageData);
-        } else {
+ 
             $pagina = \Sitedigitalweb\Pagina\Tenant\Page::create($pageData);
-        }
-
+     
+       
         return redirect('sd/pages')->with([
             'status' => 'ok_create',
             'message' => 'Página creada exitosamente'
@@ -107,7 +103,7 @@ public function create(StorePageRequest $request)
 
     } catch (\Exception $e) {
         // Log del error para debugging
-        // \Log::error('Error al crear página: ' . $e->getMessage());
+        \Log::error('Error al crear página: ' . $e->getMessage());
         
         return redirect()->back()
             ->withInput()
@@ -234,7 +230,7 @@ public function destroy($id)
             ]);
             
     } catch (\Exception $e) {
-        // \Log::error('Error al eliminar página: ' . $e->getMessage());
+        \Log::error('Error al eliminar página: ' . $e->getMessage());
         return redirect()->back()
             ->with([
                 'status' => 'error',
@@ -312,8 +308,4 @@ $idsuscripcion = DB::table('trans_payco')->where('email', '=', Auth::user()->ema
   $usuario = User::leftJoin('paises', 'paises.id', '=', 'users.pais_id')->where('users.id','=', Auth::user()->id)->get();
   return View('pagina::saas.editar-contrasena')->with('usuario', $usuario)->with('paises', $paises);
  }
-
-
-
-
 }

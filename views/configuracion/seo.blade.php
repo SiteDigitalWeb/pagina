@@ -57,296 +57,269 @@
                     </div>
                 </div>
 
-                {{ Form::open([
-                    'files' => true,
-                    'method' => 'POST',
-                    'class' => 'form-horizontal',
-                    'id' => 'seoForm',
-                    'url' => 'sd/seo'
-                ]) }}
+                <form method="POST"
+      action="{{ url('sd/seo') }}"
+      class="form-horizontal"
+      id="seoForm"
+      enctype="multipart/form-data">
+    @csrf
 
-                {{-- Configuración Básica SEO --}}
-                <div class="seo-section">
-                    <h4 class="section-title">Configuración Básica</h4>
-                    
-                    <div class="form-group">
-                        {{ Form::label('idioma', 'Idioma', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::text('idioma', $seo->idioma, [
-                                'class' => 'form-control',
-                                'placeholder' => 'es, en, fr, etc.'
-                            ]) }}
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        {{ Form::label('canonical', 'Canonical URL', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::text('canonical', $seo->canonical, [
-                                'class' => 'form-control',
-                                'placeholder' => 'https://misitio.com'
-                            ]) }}
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        {{ Form::label('robot', 'Robots', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::textarea('robot', $seo->robots, [
-                                'class' => 'form-control',
-                                'placeholder' => 'index, follow, noindex, nofollow, etc.',
-                                'rows' => 2
-                            ]) }}
-                        </div>
-                    </div>
-                </div>
+    {{-- Configuración Básica SEO --}}
+    <div class="seo-section">
+        <h4 class="section-title">Configuración Básica</h4>
 
-                {{-- Open Graph --}}
-                <div class="seo-section">
-                    <h4 class="section-title">Open Graph</h4>
-                    
-                    <div class="form-group">
-                        {{ Form::label('og_name', 'og:title', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::text('og_name', $seo->og_name, [
-                                'class' => 'form-control',
-                                'placeholder' => 'Título para redes sociales'
-                            ]) }}
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        {{ Form::label('og_type', 'og:type', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::text('og_type', $seo->og_type, [
-                                'class' => 'form-control',
-                                'placeholder' => 'website, article, product, etc.'
-                            ]) }}
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        {{ Form::label('og_url', 'og:url', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::text('og_url', $seo->og_url, [
-                                'class' => 'form-control',
-                                'placeholder' => 'URL canónica para compartir'
-                            ]) }}
-                        </div>
-                    </div>
-                    
-                    {{-- OG Image --}}
-                    <div class="form-group">
-                        {{ Form::label('og_image', 'og:image', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            <div class="input-group">
-                                {{ Form::text('og_image', $seo->og_image, [
-                                    'class' => 'form-control',
-                                    'id' => 'og_image_input',
-                                    'placeholder' => 'URL de la imagen para redes sociales',
-                                    'readonly' => true
-                                ]) }}
-                                <span class="input-group-btn">
-                                    <button class="btn btn-default" type="button" onclick="openFileManager('og_image_input')">
-                                        <i class="fa fa-folder-open"></i> Seleccionar
-                                    </button>
-                                </span>
-                            </div>
-                            <small class="help-text">Imagen para redes sociales (1200x630px recomendado)</small>
-                            
-                            <div class="image-preview mt-2" id="og_image_preview" 
-                                 style="{{ $seo->og_image ? '' : 'display: none;' }}">
-                                @if($seo->og_image)
-                                    <img src="{{ $seo->og_image }}" alt="OG Image Preview" 
-                                         style="max-width: 200px; height: auto; border: 1px solid #ddd; padding: 5px; border-radius: 4px;">
-                                    <div class="mt-1">
-                                        <small class="text-muted">{{ $seo->og_image }}</small>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="idioma">Idioma</label>
+            <div class="col-md-9">
+                <input type="text" name="idioma" id="idioma"
+                    value="{{ old('idioma', $seo->idioma) }}"
+                    class="form-control"
+                    placeholder="es, en, fr, etc.">
+            </div>
+        </div>
 
-                {{-- Twitter Card --}}
-                <div class="seo-section">
-                    <h4 class="section-title">Twitter Card</h4>
-                    
-                    <div class="form-group">
-                        {{ Form::label('twitter_card', 'twitter:card', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::text('twitter_card', $seo->twitter_card, [
-                                'class' => 'form-control',
-                                'placeholder' => 'summary, summary_large_image, etc.'
-                            ]) }}
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        {{ Form::label('twitter_site', 'twitter:site', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::text('twitter_site', $seo->twitter_site, [
-                                'class' => 'form-control',
-                                'placeholder' => '@usuariotwitter'
-                            ]) }}
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        {{ Form::label('twitter_creator', 'twitter:creator', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::text('twitter_creator', $seo->twitter_creator, [
-                                'class' => 'form-control',
-                                'placeholder' => '@creadorcontenido'
-                            ]) }}
-                        </div>
-                    </div>
-                    
-                    {{-- Twitter Image --}}
-                    <div class="form-group">
-                        {{ Form::label('twitter_image', 'twitter:image', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            <div class="input-group">
-                                {{ Form::text('twitter_image', $seo->twitter_image, [
-                                    'class' => 'form-control',
-                                    'id' => 'twitter_image_input',
-                                    'placeholder' => 'URL de la imagen para Twitter',
-                                    'readonly' => true
-                                ]) }}
-                                <span class="input-group-btn">
-                                    <button class="btn btn-default" type="button" onclick="openFileManager('twitter_image_input')">
-                                        <i class="fa fa-folder-open"></i> Seleccionar
-                                    </button>
-                                </span>
-                            </div>
-                            <small class="help-text">Imagen para Twitter (1200x600px recomendado)</small>
-                            
-                            <div class="image-preview mt-2" id="twitter_image_preview" 
-                                 style="{{ $seo->twitter_image ? '' : 'display: none;' }}">
-                                @if($seo->twitter_image)
-                                    <img src="{{ $seo->twitter_image }}" alt="Twitter Image Preview" 
-                                         style="max-width: 200px; height: auto; border: 1px solid #ddd; padding: 5px; border-radius: 4px;">
-                                    <div class="mt-1">
-                                        <small class="text-muted">{{ $seo->twitter_image }}</small>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="canonical">Canonical URL</label>
+            <div class="col-md-9">
+                <input type="text" name="canonical" id="canonical"
+                    value="{{ old('canonical', $seo->canonical) }}"
+                    class="form-control"
+                    placeholder="https://misitio.com">
+            </div>
+        </div>
 
-                {{-- Favicons --}}
-                <div class="seo-section">
-                    <h4 class="section-title">Favicons</h4>
-                    
-                    <div class="form-group">
-                        {{ Form::label('ico', 'Favicon ICO', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            <div class="input-group">
-                                {{ Form::text('ico', $seo->ico, [
-                                    'class' => 'form-control',
-                                    'id' => 'ico_input',
-                                    'placeholder' => 'URL del favicon .ico',
-                                    'readonly' => true
-                                ]) }}
-                                <span class="input-group-btn">
-                                    <button class="btn btn-default" type="button" onclick="openFileManager('ico_input')">
-                                        <i class="fa fa-folder-open"></i> Seleccionar
-                                    </button>
-                                </span>
-                            </div>
-                            <small class="help-text">Favicon tradicional .ico (32x32px)</small>
-                            
-                            <div class="image-preview mt-2" id="ico_preview" 
-                                 style="{{ $seo->ico ? '' : 'display: none;' }}">
-                                @if($seo->ico)
-                                    <img src="{{ $seo->ico }}" alt="Favicon Preview" 
-                                         style="max-width: 32px; height: auto; border: 1px solid #ddd; padding: 5px; border-radius: 4px;">
-                                    <div class="mt-1">
-                                        <small class="text-muted">{{ $seo->ico }}</small>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        {{ Form::label('icoapple', 'Apple Touch Icon', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            <div class="input-group">
-                                {{ Form::text('icoapple', $seo->icoapple, [
-                                    'class' => 'form-control',
-                                    'id' => 'ico_apple_input',
-                                    'placeholder' => 'URL del icono para Apple',
-                                    'readonly' => true
-                                ]) }}
-                                <span class="input-group-btn">
-                                    <button class="btn btn-default" type="button" onclick="openFileManager('ico_apple_input')">
-                                        <i class="fa fa-folder-open"></i> Seleccionar
-                                    </button>
-                                </span>
-                            </div>
-                            <small class="help-text">Icono para dispositivos Apple (180x180px)</small>
-                            
-                            <div class="image-preview mt-2" id="ico_apple_preview" 
-                                 style="{{ $seo->icoapple ? '' : 'display: none;' }}">
-                                @if($seo->icoapple)
-                                    <img src="{{ $seo->icoapple }}" alt="Apple Icon Preview" 
-                                         style="max-width: 60px; height: auto; border: 1px solid #ddd; padding: 5px; border-radius: 4px;">
-                                    <div class="mt-1">
-                                        <small class="text-muted">{{ $seo->icoapple }}</small>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="robot">Robots</label>
+            <div class="col-md-9">
+                <textarea name="robot" id="robot" rows="2"
+                    class="form-control"
+                    placeholder="index, follow, noindex, nofollow, etc.">{{ old('robot', $seo->robots) }}</textarea>
+            </div>
+        </div>
+    </div>
 
-                {{-- Google Analytics --}}
-                <div class="seo-section">
-                    <h4 class="section-title">Google Analytics</h4>
-                    
-                    <div class="form-group">
-                        {{ Form::label('analitica', 'Código de Seguimiento', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::textarea('analitica', $seo->analitica, [
-                                'class' => 'form-control',
-                                'placeholder' => 'Pega aquí el código de Google Analytics',
-                                'rows' => 4
-                            ]) }}
-                        </div>
-                    </div>
-                </div>
+    {{-- Open Graph --}}
+    <div class="seo-section">
+        <h4 class="section-title">Open Graph</h4>
 
-                {{-- Google Ads --}}
-                <div class="seo-section">
-                    <h4 class="section-title">Google Ads</h4>
-                    
-                    <div class="form-group">
-                        {{ Form::label('ads', 'Etiqueta de Seguimiento', ['class' => 'col-md-3 control-label']) }}
-                        <div class="col-md-9">
-                            {{ Form::textarea('ads', $seo->ads, [
-                                'class' => 'form-control',
-                                'placeholder' => 'Pega aquí el código de Google Ads',
-                                'rows' => 4
-                            ]) }}
-                        </div>
-                    </div>
-                </div>
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="og_name">og:title</label>
+            <div class="col-md-9">
+                <input type="text" name="og_name" id="og_name"
+                    value="{{ old('og_name', $seo->og_name) }}"
+                    class="form-control"
+                    placeholder="Título para redes sociales">
+            </div>
+        </div>
 
-                {{-- Botones de acción --}}
-                <div class="form-group form-actions">
-                    <div class="col-md-9 col-md-offset-3">
-                        <button type="submit" class="btn btn-sm btn-primary">
-                            <i class="fa fa-save"></i> Guardar todos los cambios
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="og_type">og:type</label>
+            <div class="col-md-9">
+                <input type="text" name="og_type" id="og_type"
+                    value="{{ old('og_type', $seo->og_type) }}"
+                    class="form-control"
+                    placeholder="website, article, product, etc.">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="og_url">og:url</label>
+            <div class="col-md-9">
+                <input type="text" name="og_url" id="og_url"
+                    value="{{ old('og_url', $seo->og_url) }}"
+                    class="form-control"
+                    placeholder="URL canónica para compartir">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="og_image_input">og:image</label>
+            <div class="col-md-9">
+                <div class="input-group">
+                    <input type="text" name="og_image" id="og_image_input"
+                        value="{{ old('og_image', $seo->og_image) }}"
+                        class="form-control"
+                        placeholder="URL de la imagen para redes sociales"
+                        readonly>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button" onclick="openFileManager('og_image_input')">
+                            <i class="fa fa-folder-open"></i> Seleccionar
                         </button>
-                        <button type="reset" class="btn btn-sm btn-warning">
-                            <i class="fa fa-repeat"></i> Restablecer formulario
-                        </button>
-                    </div>
+                    </span>
                 </div>
+                <small class="help-text">Imagen para redes sociales (1200x630px recomendado)</small>
+                <div class="image-preview mt-2" id="og_image_preview"
+                     style="{{ $seo->og_image ? '' : 'display: none;' }}">
+                    @if($seo->og_image)
+                        <img src="{{ $seo->og_image }}" alt="OG Image Preview"
+                             style="max-width: 200px; height: auto; border: 1px solid #ddd; padding: 5px; border-radius: 4px;">
+                        <div class="mt-1"><small class="text-muted">{{ $seo->og_image }}</small></div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 
-                {{ Form::close() }}
+    {{-- Twitter Card --}}
+    <div class="seo-section">
+        <h4 class="section-title">Twitter Card</h4>
+
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="twitter_card">twitter:card</label>
+            <div class="col-md-9">
+                <input type="text" name="twitter_card" id="twitter_card"
+                    value="{{ old('twitter_card', $seo->twitter_card) }}"
+                    class="form-control"
+                    placeholder="summary, summary_large_image, etc.">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="twitter_site">twitter:site</label>
+            <div class="col-md-9">
+                <input type="text" name="twitter_site" id="twitter_site"
+                    value="{{ old('twitter_site', $seo->twitter_site) }}"
+                    class="form-control"
+                    placeholder="@usuariotwitter">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="twitter_creator">twitter:creator</label>
+            <div class="col-md-9">
+                <input type="text" name="twitter_creator" id="twitter_creator"
+                    value="{{ old('twitter_creator', $seo->twitter_creator) }}"
+                    class="form-control"
+                    placeholder="@creadorcontenido">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="twitter_image_input">twitter:image</label>
+            <div class="col-md-9">
+                <div class="input-group">
+                    <input type="text" name="twitter_image" id="twitter_image_input"
+                        value="{{ old('twitter_image', $seo->twitter_image) }}"
+                        class="form-control"
+                        placeholder="URL de la imagen para Twitter"
+                        readonly>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button" onclick="openFileManager('twitter_image_input')">
+                            <i class="fa fa-folder-open"></i> Seleccionar
+                        </button>
+                    </span>
+                </div>
+                <small class="help-text">Imagen para Twitter (1200x600px recomendado)</small>
+                <div class="image-preview mt-2" id="twitter_image_preview"
+                     style="{{ $seo->twitter_image ? '' : 'display: none;' }}">
+                    @if($seo->twitter_image)
+                        <img src="{{ $seo->twitter_image }}" alt="Twitter Image Preview"
+                             style="max-width: 200px; height: auto; border: 1px solid #ddd; padding: 5px; border-radius: 4px;">
+                        <div class="mt-1"><small class="text-muted">{{ $seo->twitter_image }}</small></div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Favicons --}}
+    <div class="seo-section">
+        <h4 class="section-title">Favicons</h4>
+
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="ico_input">Favicon ICO</label>
+            <div class="col-md-9">
+                <div class="input-group">
+                    <input type="text" name="ico" id="ico_input"
+                        value="{{ old('ico', $seo->ico) }}"
+                        class="form-control"
+                        placeholder="URL del favicon .ico"
+                        readonly>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button" onclick="openFileManager('ico_input')">
+                            <i class="fa fa-folder-open"></i> Seleccionar
+                        </button>
+                    </span>
+                </div>
+                <small class="help-text">Favicon tradicional .ico (32x32px)</small>
+                <div class="image-preview mt-2" id="ico_preview"
+                     style="{{ $seo->ico ? '' : 'display: none;' }}">
+                    @if($seo->ico)
+                        <img src="{{ $seo->ico }}" alt="Favicon Preview"
+                             style="max-width: 32px; height: auto; border: 1px solid #ddd; padding: 5px; border-radius: 4px;">
+                        <div class="mt-1"><small class="text-muted">{{ $seo->ico }}</small></div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="ico_apple_input">Apple Touch Icon</label>
+            <div class="col-md-9">
+                <div class="input-group">
+                    <input type="text" name="icoapple" id="ico_apple_input"
+                        value="{{ old('icoapple', $seo->icoapple) }}"
+                        class="form-control"
+                        placeholder="URL del icono para Apple"
+                        readonly>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button" onclick="openFileManager('ico_apple_input')">
+                            <i class="fa fa-folder-open"></i> Seleccionar
+                        </button>
+                    </span>
+                </div>
+                <small class="help-text">Icono para dispositivos Apple (180x180px)</small>
+                <div class="image-preview mt-2" id="ico_apple_preview"
+                     style="{{ $seo->icoapple ? '' : 'display: none;' }}">
+                    @if($seo->icoapple)
+                        <img src="{{ $seo->icoapple }}" alt="Apple Icon Preview"
+                             style="max-width: 60px; height: auto; border: 1px solid #ddd; padding: 5px; border-radius: 4px;">
+                        <div class="mt-1"><small class="text-muted">{{ $seo->icoapple }}</small></div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Google Analytics --}}
+    <div class="seo-section">
+        <h4 class="section-title">Google Analytics</h4>
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="analitica">Código de Seguimiento</label>
+            <div class="col-md-9">
+                <textarea name="analitica" id="analitica" rows="4"
+                    class="form-control"
+                    placeholder="Pega aquí el código de Google Analytics">{{ old('analitica', $seo->analitica) }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    {{-- Google Ads --}}
+    <div class="seo-section">
+        <h4 class="section-title">Google Ads</h4>
+        <div class="form-group">
+            <label class="col-md-3 control-label" for="ads">Etiqueta de Seguimiento</label>
+            <div class="col-md-9">
+                <textarea name="ads" id="ads" rows="4"
+                    class="form-control"
+                    placeholder="Pega aquí el código de Google Ads">{{ old('ads', $seo->ads) }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    {{-- Botones --}}
+    <div class="form-group form-actions">
+        <div class="col-md-9 col-md-offset-3">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="fa fa-save"></i> Guardar todos los cambios
+            </button>
+            <button type="reset" class="btn btn-sm btn-warning">
+                <i class="fa fa-repeat"></i> Restablecer formulario
+            </button>
+        </div>
+    </div>
+
+</form>
             </div>
         </div>
     </div>

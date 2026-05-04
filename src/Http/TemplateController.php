@@ -24,16 +24,8 @@ public function editor(Request $request)
 {
     $templateId = $request->query('load');
 
-    // Detectar si estamos en un tenant
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
-
-    // Si estamos en tenant, simplemente usamos la base del tenant
-    if ($website) {
-        $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first(); // Aquí no hay website_id
-    } else {
-        // En la base central, también usamos sin filtro
         $web = Cms_Template::first(); // O con filtro si tú creaste website_id
-    }
+
 
     return view('pagina::pages.editor', compact('templateId', 'web'));
 }
@@ -42,122 +34,111 @@ public function editor(Request $request)
 
 public function preview($id)
 {
+    $isTenant = tenancy()->initialized;
 
-    if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
-        // Entorno tenant específico
-        $template = \Sitedigitalweb\Pagina\Tenant\Page::findOrFail($id);
-        $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
-        $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
-        $seo_web = \Sitedigitalweb\Pagina\Tenant\Cms_seo::first();
-        $productos_online = \Sitedigitalweb\Carrito\Tenant\Cms_producto::all();
-        $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
+    // Seleccionar modelos según contexto
+    $pageModel      = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Page::class           : \Sitedigitalweb\Pagina\Page::class;
+    $recaptchaModel = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::class  : \Sitedigitalweb\Pagina\Cms_Recaptcha::class;
+    $templateModel  = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Cms_Template::class   : \Sitedigitalweb\Pagina\Cms_Template::class;
+    $seoModel       = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Cms_seo::class        : \Sitedigitalweb\Pagina\Cms_seo::class;
+
+    $template  = $pageModel::findOrFail($id);
+    $recaptcha = $recaptchaModel::first();
+    $web       = $templateModel::first();
+    $seo_web   = $seoModel::first();
+
+    $menuPages = $pageModel::whereNull('page_id')
         ->where('visibility', 1)
         ->orderBy('position', 'asc')
         ->with(['children' => function ($query) {
             $query->where('visibility', 1)->orderBy('position', 'asc');
         }])
         ->get();
-    } else {
-        // Entorno central
-        $template = Page::findOrFail($id);
-        $recaptcha = Cms_Recaptcha::first();
-        $web = Cms_Template::first();
-        $productos_online = Cms_producto::all();
-        $seo_web = Cms_seo::first();
-        $menuPages = Page::whereNull('page_id')
-        ->where('visibility', 1)
-        ->orderBy('position', 'asc')
-        ->with(['children' => function ($query) {
-            $query->where('visibility', 1)->orderBy('position', 'asc');
-        }])
-        ->get();
-    }
 
-    $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
+    $structure = is_string($template->content)
+        ? json_decode($template->content, true)
+        : $template->content;
 
     $content = $this->renderComponent($structure ?? []);
-    $styles = $this->renderStyles($template->styles);
+    $styles  = $this->renderStyles($template->styles);
     $scripts = $this->renderScripts($template->scripts);
 
     $tenantData = [
-        'is_tenant' => isset($website),
-        'tenant_id' => $website->id ?? null,
-        'tenant_name' => $website->name ?? null
+        'is_tenant'   => $isTenant,
+        'tenant_id'   => $isTenant ? tenant('id') : null,
+        'tenant_name' => $isTenant ? tenant('id') : null,
     ];
 
     $seo = [
         'title'       => $template->title ?? $template->name,
-        'description' => $template->description ?? Str::limit(strip_tags($template->content), 160),
+        'description' => $template->description ?? \Illuminate\Support\Str::limit(strip_tags($template->content), 160),
         'keywords'    => $template->keywords ?? '',
         'url'         => url()->current(),
     ];
 
-    // Aquí definimos la carpeta de plantilla desde BD
-    $templateFolder = $web->template ?? 'default';
-
-    // Render dinámico de la vista
-    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages','seo','seo_web','productos_online'));
+    return view('pagina::page', compact(
+        'template', 'content', 'styles', 'scripts',
+        'tenantData', 'recaptcha', 'web', 'menuPages',
+        'seo', 'seo_web'
+    ));
 }
 
 
 
 public function page()
 {
-    if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
-        // Entorno tenant específico, sin usar website_id
-        $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', '/')->firstOrFail();
-        $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
-        $seo_web = \Sitedigitalweb\Pagina\Tenant\Cms_seo::first();
-        $productos_online = \Sitedigitalweb\Carrito\Tenant\Cms_producto::all();
-        $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
-        $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
-        ->where('visibility', 1)
-        ->orderBy('position', 'asc')
-        ->with(['children' => function ($query) {
-            $query->where('visibility', 1)->orderBy('position', 'asc');
-        }])
-        ->get();
-        
-    } else {
-        // Entorno central (host)
-        $template = Page::where('slug', '/')->firstOrFail();
-        $recaptcha = Cms_Recaptcha::first();
-        $seo_web = Cms_seo::first();
-        $productos_online = Cms_producto::all();
-        $web = Cms_Template::first();
-        $menuPages = Page::whereNull('page_id')
-        ->where('visibility', 1)
-        ->orderBy('position', 'asc')
-        ->with(['children' => function ($query) {
-            $query->where('visibility', 1)->orderBy('position', 'asc');
-        }])
-        ->get();
-    }
 
-    $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
+    $isTenant       = tenancy()->initialized;
+    $pageModel      = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Page::class          : \Sitedigitalweb\Pagina\Page::class;
+    $recaptchaModel = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::class : \Sitedigitalweb\Pagina\Cms_Recaptcha::class;
+    $templateModel  = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Cms_Template::class  : \Sitedigitalweb\Pagina\Cms_Template::class;
+    $seoModel       = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Cms_seo::class       : \Sitedigitalweb\Pagina\Cms_seo::class;
+
+    $template  = $pageModel::where('slug', '/')->firstOrFail();
+    $recaptcha = $recaptchaModel::first();
+    $web       = $templateModel::first();
+    $seo_web   = $seoModel::first();
+
+    $menuPages = $pageModel::whereNull('page_id')
+        ->where('visibility', 1)
+        ->orderBy('position', 'asc')
+        ->with(['children' => function ($query) {
+            $query->where('visibility', 1)->orderBy('position', 'asc');
+        }])
+        ->get();
+
+    $structure = is_string($template->content)
+        ? json_decode($template->content, true)
+        : $template->content;
 
     $content = $this->renderComponent($structure ?? []);
-    $styles = $this->renderStyles($template->styles);
+    $styles  = $this->renderStyles($template->styles);
     $scripts = $this->renderScripts($template->scripts);
 
     $tenantData = [
-        'is_tenant' => isset($website),
-        'tenant_id' => $website->id ?? null,
-        'tenant_name' => $website->name ?? null
+        'is_tenant'   => $isTenant,
+        'tenant_id'   => $isTenant ? tenant('id') : null,
+        'tenant_name' => $isTenant ? tenant('id') : null,
     ];
+
+    // ← Convertir content a string antes de strip_tags
+    $contentText = is_array($template->content)
+        ? json_encode($template->content)
+        : ($template->content ?? '');
 
     $seo = [
         'title'       => $template->title ?? $template->name,
-        'description' => $template->description ?? Str::limit(strip_tags($template->content), 160),
+        'description' => $template->description 
+                         ?? \Illuminate\Support\Str::limit(strip_tags($contentText), 160),
         'keywords'    => $template->keywords ?? '',
         'url'         => url()->current(),
     ];
 
-    // Suponiendo que en cms_template tienes una columna 'template_name'
-    $templateFolder = $web->template ?? 'default';
-
-    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web','productos_online'));
-
+    return view('pagina::page', compact(
+        'template', 'content', 'styles', 'scripts',
+        'tenantData', 'recaptcha', 'web', 'menuPages',
+        'seo', 'seo_web'
+    ));
 }
 
 
@@ -189,53 +170,52 @@ public function menu()
 
 public function pages($page)
 {
-    if ($website = app(\Hyn\Tenancy\Environment::class)->website()) {
-        // Entorno tenant específico, sin usar website_id
-        $template = \Sitedigitalweb\Pagina\Tenant\Page::where('slug', $page)->firstOrFail();
-        $recaptcha = \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::first();
-        $seo_web = \Sitedigitalweb\Pagina\Tenant\Cms_seo::first();
-        $productos_online = \Sitedigitalweb\Carrito\Tenant\Cms_producto::all();
-        $web = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first();
-        $menuPages = \Sitedigitalweb\Pagina\Tenant\Page::whereNull('page_id')
+    $isTenant = tenancy()->initialized;
+
+    $pageModel      = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Page::class          : \Sitedigitalweb\Pagina\Page::class;
+    $recaptchaModel = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Cms_Recaptcha::class : \Sitedigitalweb\Pagina\Cms_Recaptcha::class;
+    $templateModel  = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Cms_Template::class  : \Sitedigitalweb\Pagina\Cms_Template::class;
+    $seoModel       = $isTenant ? \Sitedigitalweb\Pagina\Tenant\Cms_seo::class       : \Sitedigitalweb\Pagina\Cms_seo::class;
+
+    $template  = $pageModel::where('slug', $page)->firstOrFail();
+    $recaptcha = $recaptchaModel::first();
+    $web       = $templateModel::first();
+    $seo_web   = $seoModel::first();
+
+    $menuPages = $pageModel::whereNull('page_id')
         ->where('visibility', 1)
         ->orderBy('position', 'asc')
         ->with(['children' => function ($query) {
             $query->where('visibility', 1)->orderBy('position', 'asc');
         }])
         ->get();
-        
-    } else {
-        // Entorno central (host)
-        $template = Page::where('slug', $page)->firstOrFail();
-        $recaptcha = Cms_Recaptcha::first();
-        $seo_web = Cms_seo::first();
-        $productos_online = Cms_producto::all();
-        $web = Cms_Template::first();
-        $menuPages = Page::whereNull('page_id')
-        ->where('visibility', 1)
-        ->orderBy('position', 'asc')
-        ->with(['children' => function ($query) {
-            $query->where('visibility', 1)->orderBy('position', 'asc');
-        }])
-        ->get();
-    }
-    $structure = is_string($template->content) ? json_decode($template->content, true) : $template->content;
+
+    $structure = is_string($template->content)
+        ? json_decode($template->content, true)
+        : $template->content;
+
     $content = $this->renderComponent($structure ?? []);
-    $styles = $this->renderStyles($template->styles);
+    $styles  = $this->renderStyles($template->styles);
     $scripts = $this->renderScripts($template->scripts);
+
     $tenantData = [
-        'is_tenant' => isset($website),
-        'tenant_id' => $website->id ?? null,
-        'tenant_name' => $website->name ?? null
+        'is_tenant'   => $isTenant,
+        'tenant_id'   => $isTenant ? tenant('id') : null,
+        'tenant_name' => $isTenant ? tenant('id') : null,
     ];
+
     $seo = [
         'title'       => $template->title ?? $template->name,
-        'description' => $template->description ?? Str::limit(strip_tags($template->content), 160),
+        'description' => $template->description ?? \Illuminate\Support\Str::limit(strip_tags($template->content), 160),
         'keywords'    => $template->keywords ?? '',
         'url'         => url()->current(),
     ];
-    $templateFolder = $web->template ?? 'default';
-    return view('pagina::page', compact('template', 'content', 'styles', 'scripts', 'tenantData', 'recaptcha', 'web', 'menuPages', 'seo', 'seo_web','productos_online'));
+
+    return view('pagina::page', compact(
+        'template', 'content', 'styles', 'scripts',
+        'tenantData', 'recaptcha', 'web', 'menuPages',
+        'seo', 'seo_web'
+    ));
 }
 
 private function renderScripts(array $scriptsArray): string
@@ -1926,15 +1906,10 @@ private function extractHtmlFromComponents($components)
 public function showForm()
 {
 
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
 
-    if ($website) {
         // Si quieres asegurarte de obtener el theme específico del tenant
         $theme = \Sitedigitalweb\Pagina\Tenant\Cms_theme::first();
-    } else {
-        // En sistema central, podrías querer filtrar por un campo específico
-        $theme = Cms_theme::first();
-    }
+  
 
     return view('pagina::pages.editor', compact('theme'));
 }
@@ -1946,177 +1921,146 @@ public function theme(Request $request)
     $validated = $request->validate([
         'template_id' => 'nullable|integer|max:100',
         'theme'       => 'nullable|string|max:150',
-        'color_1' => 'nullable|string|max:7',
-        'color_2' => 'nullable|string|max:7',
-        'color_3' => 'nullable|string|max:7',
-        'color_4' => 'nullable|string|max:7',
-        'font_h1' => 'nullable|string|max:50',
-        'font_h2' => 'nullable|string|max:50',
-        'font_h3' => 'nullable|string|max:50',
-        'font_h4' => 'nullable|string|max:50',
-        'font_h5' => 'nullable|string|max:50',
-        'size_h1' => 'nullable|integer|min:10|max:100',
-        'size_h2' => 'nullable|integer|min:10|max:100',
-        'size_h3' => 'nullable|integer|min:10|max:100',
-        'size_h4' => 'nullable|integer|min:10|max:100',
-        'size_h5' => 'nullable|integer|min:10|max:100',
+        'color_1'     => 'nullable|string|max:7',
+        'color_2'     => 'nullable|string|max:7',
+        'color_3'     => 'nullable|string|max:7',
+        'color_4'     => 'nullable|string|max:7',
+        'font_h1'     => 'nullable|string|max:50',
+        'font_h2'     => 'nullable|string|max:50',
+        'font_h3'     => 'nullable|string|max:50',
+        'font_h4'     => 'nullable|string|max:50',
+        'font_h5'     => 'nullable|string|max:50',
+        'size_h1'     => 'nullable|integer|min:10|max:100',
+        'size_h2'     => 'nullable|integer|min:10|max:100',
+        'size_h3'     => 'nullable|integer|min:10|max:100',
+        'size_h4'     => 'nullable|integer|min:10|max:100',
+        'size_h5'     => 'nullable|integer|min:10|max:100',
     ]);
 
     try {
-        // Detectar si estamos en un tenant
-        $website = app(\Hyn\Tenancy\Environment::class)->website();
-        
-        if ($website) {
-            // Usar modelos del tenant
-            $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_theme::class;
-            $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
-            $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
-            $tenantId = $website->id;
-            $tenantUuid = $website->uuid;
-        } else {
-            // Usar modelos del sistema central
-            $themeModel = Cms_theme::class;
-            $variableModel = Cms_variable::class;
-            $templateModel = Cms_Template::class;
-            $tenantId = null;
-            $tenantUuid = 'central';
-        }
+        $isTenant    = tenancy()->initialized;
+        $tenantId    = $isTenant ? tenant('id') : null;
+        $tenantUuid  = $tenantId; // En Stancl el id es el slug/uuid
 
-        // Si existe cms_theme actualiza
+        $themeModel    = $isTenant
+            ? \Sitedigitalweb\Pagina\Tenant\Cms_theme::class
+            : \Sitedigitalweb\Pagina\Cms_theme::class;
+
+        $variableModel = $isTenant
+            ? \Sitedigitalweb\Pagina\Tenant\Cms_variable::class
+            : \Sitedigitalweb\Pagina\Cms_variable::class;
+
+        $templateModel = $isTenant
+            ? \Sitedigitalweb\Pagina\Tenant\Cms_Template::class
+            : \Sitedigitalweb\Pagina\Cms_Template::class;
+
+        // Si existe cms_theme actualiza, si no crea
         $theme = $themeModel::first();
 
-        if (!$theme) {
-            // Si no hay cms_theme, crea uno nuevo con los datos de cms_variable
-            $variable = $variableModel::first();
+        if (! $theme) {
+            $variable  = $variableModel::first();
             $themeData = array_merge(
-                (array) $variable ?? [],
+                $variable ? $variable->toArray() : [],
                 $validated
             );
-            
-            // Si el modelo tenant necesita website_id, agregarlo
-            if ($website && !isset($themeData['website_id'])) {
-                $themeData['website_id'] = $website->id;
-            }
-            
             $theme = $themeModel::create($themeData);
         } else {
             $theme->update($validated);
         }
 
-        // Obtener el template desde la base de datos
-        $template = $templateModel::first();
-        $templateName = 'default';
-        
-        if ($template && !empty($template->template)) {
-            $templateName = $template->template;
-        }
+        // Obtener template
+        $template     = $templateModel::first();
+        $templateName = preg_replace(
+            '/[^a-zA-Z0-9_-]/',
+            '',
+            $template->template ?? 'default'
+        ) ?: 'default';
 
-        // Limpiar el nombre del template
-        $templateName = preg_replace('/[^a-zA-Z0-9_-]/', '', $templateName);
-        if (empty($templateName)) {
-            $templateName = 'default';
-        }
-
-        // ======================
-        // GENERAR CSS PARA EL TENANT
-        // ======================
-        $css = "/* CSS para Tenant: {$tenantUuid} - Template: {$templateName} */\n";
+        // Generar CSS
+        $css  = "/* CSS Tenant: {$tenantUuid} - Template: {$templateName} */\n";
         $css .= ":root {\n";
-        
-        // Colores específicos del tenant
+
         for ($i = 1; $i <= 4; $i++) {
-            $color = $theme->{'color_'.$i} ?? '#000000';
-            $css .= "    --color-{$i}: {$color};\n";
+            $color = $theme->{'color_' . $i} ?? '#000000';
+            $css  .= "    --color-{$i}: {$color};\n";
         }
-        
-        // ✅ AGREGAR COLOR PRIMARY Y SECONDARY
-        $colorPrimary = $theme->color_1 ?? '#000000';
-        $colorSecondary = $theme->color_2 ?? '#000000';
-        $css .= "    --color-primary: {$colorPrimary};\n";
-        $css .= "    --color-secondary: {$colorSecondary};\n";
-        
-        // Fuentes específicas del tenant
+
+        $css .= "    --color-primary: "   . ($theme->color_1 ?? '#000000') . ";\n";
+        $css .= "    --color-secondary: " . ($theme->color_2 ?? '#000000') . ";\n";
+
         for ($i = 1; $i <= 5; $i++) {
-            $font = $theme->{'font_h'.$i} ?? 'Roboto';
-            $size = $theme->{'size_h'.$i} ?? 16;
+            $font = $theme->{'font_h' . $i} ?? 'Roboto';
+            $size = $theme->{'size_h' . $i} ?? 16;
             $css .= "    --font-h{$i}: '{$font}', sans-serif;\n";
             $css .= "    --size-h{$i}: {$size}px;\n";
         }
         $css .= "}\n\n";
 
-        // Clases de color específicas del tenant
         for ($i = 1; $i <= 4; $i++) {
-            $colorClass = $theme->{'var_color_'.$i} ?? null;
+            $colorClass = $theme->{'var_color_' . $i} ?? null;
             if ($colorClass) {
                 $css .= ".{$colorClass} { background: var(--color-{$i}) !important; }\n";
             }
         }
 
-        // ✅ AGREGAR CLASES PARA PRIMARY Y SECONDARY
-        $css .= ".color-primary { background: var(--color-primary) !important; }\n";
-        $css .= ".color-secondary { background: var(--color-secondary) !important; }\n";
-        $css .= ".text-primary { color: var(--color-primary) !important; }\n";
-        $css .= ".text-secondary { color: var(--color-secondary) !important; }\n";
-        $css .= ".border-primary { border-color: var(--color-primary) !important; }\n";
+        $css .= ".color-primary    { background: var(--color-primary) !important; }\n";
+        $css .= ".color-secondary  { background: var(--color-secondary) !important; }\n";
+        $css .= ".text-primary     { color: var(--color-primary) !important; }\n";
+        $css .= ".text-secondary   { color: var(--color-secondary) !important; }\n";
+        $css .= ".border-primary   { border-color: var(--color-primary) !important; }\n";
         $css .= ".border-secondary { border-color: var(--color-secondary) !important; }\n";
-        $css .= ".bg-primary { background-color: var(--color-primary) !important; }\n";
-        $css .= ".bg-secondary { background-color: var(--color-secondary) !important; }\n";
+        $css .= ".bg-primary       { background-color: var(--color-primary) !important; }\n";
+        $css .= ".bg-secondary     { background-color: var(--color-secondary) !important; }\n\n";
 
-        $css .= "\n";
-
-        // Tipografías y tamaños específicos del tenant
         for ($i = 1; $i <= 5; $i++) {
-            $fontClass = $theme->{'var_font_h'.$i} ?? 'h'.$i;
+            $fontClass = $theme->{'var_font_h' . $i} ?? 'h' . $i;
             $css .= "{$fontClass} {\n";
             $css .= "    font-family: var(--font-h{$i}) !important;\n";
             $css .= "    font-size: var(--size-h{$i}) !important;\n";
             $css .= "}\n";
         }
 
-        // ======================
-        // GUARDAR CSS POR TENANT
-        // ======================
-        if ($website) {
-            // Para TENANTS: guardar en public/tenants/{uuid}/theme.css
+        // Guardar CSS
+        if ($isTenant) {
             $cssDirectory = public_path("tenants/{$tenantUuid}");
-            $cssPath = "{$cssDirectory}/theme.css";
-            $cssUrl = url("tenants/{$tenantUuid}/theme.css");
+            $cssPath      = "{$cssDirectory}/theme.css";
+            $cssUrl       = url("tenants/{$tenantUuid}/theme.css");
         } else {
-            // Para SISTEMA CENTRAL: guardar en public/central/theme.css
             $cssDirectory = public_path('central');
-            $cssPath = "{$cssDirectory}/theme.css";
-            $cssUrl = url('central/theme.css');
+            $cssPath      = "{$cssDirectory}/theme.css";
+            $cssUrl       = url('central/theme.css');
         }
 
-        // Asegurar que el directorio existe
-        if (!File::exists($cssDirectory)) {
-            File::makeDirectory($cssDirectory, 0755, true);
+        if (! \Illuminate\Support\Facades\File::exists($cssDirectory)) {
+            \Illuminate\Support\Facades\File::makeDirectory($cssDirectory, 0755, true);
         }
 
-        // Guardar el archivo CSS
-        File::put($cssPath, $css);
+        \Illuminate\Support\Facades\File::put($cssPath, $css);
 
-        // También guardar en storage como backup
-        $storagePath = "tenants/{$tenantUuid}/theme.css";
-        Storage::disk('public')->put($storagePath, $css);
+        if ($isTenant) {
+            \Illuminate\Support\Facades\Storage::disk('public')->put(
+                "tenants/{$tenantUuid}/theme.css",
+                $css
+            );
+        }
 
         return response()->json([
-            'status'  => 'success',
-            'message' => 'Estilos del tenant guardados correctamente ✅',
-            'data'    => $theme,
-            'css_url' => $cssUrl,
+            'status'   => 'success',
+            'message'  => 'Estilos guardados correctamente ✅',
+            'data'     => $theme,
+            'css_url'  => $cssUrl,
             'css_path' => $cssPath,
             'tenant'   => $tenantUuid,
-            'template' => $templateName
-        ], 200);
+            'template' => $templateName,
+        ]);
 
     } catch (\Exception $e) {
-        \Log::error('Error al guardar theme CSS para tenant: ' . $e->getMessage());
-        
+        \Log::error('Error al guardar theme CSS: ' . $e->getMessage());
+
         return response()->json([
             'status'  => 'error',
-            'message' => 'Hubo un problema al guardar los estilos del tenant',
-            'error'   => $e->getMessage()
+            'message' => 'Hubo un problema al guardar los estilos',
+            'error'   => $e->getMessage(),
         ], 500);
     }
 }
@@ -2124,36 +2068,21 @@ public function theme(Request $request)
 public function getTenantCss()
 {
     try {
-        $website = app(\Hyn\Tenancy\Environment::class)->website();
-        
-        if ($website) {
-            // Tenant: cargar CSS específico
-            $tenantUuid = $website->uuid;
-            $cssPath = public_path("tenants/{$tenantUuid}/theme.css");
-            
-            if (File::exists($cssPath)) {
-                $css = File::get($cssPath);
-            } else {
-                // Si no existe, usar CSS por defecto
-                $css = "/* CSS por defecto - Tenant: {$tenantUuid} */\n:root { --color-1: #000000; --color-2: #ffffff; }";
-            }
+        $isTenant   = tenancy()->initialized;
+        $tenantUuid = $isTenant ? tenant('id') : 'central';
+        $cssPath    = public_path("tenants/{$tenantUuid}/theme.css");
+
+        if (\Illuminate\Support\Facades\File::exists($cssPath)) {
+            $css = \Illuminate\Support\Facades\File::get($cssPath);
         } else {
-            // Sistema central: cargar CSS central
-            $cssPath = public_path('theme-central.css');
-            
-            if (File::exists($cssPath)) {
-                $css = File::get($cssPath);
-            } else {
-                $css = "/* CSS del sistema central */\n:root { --color-1: #000000; --color-2: #ffffff; }";
-            }
+            $css = "/* CSS por defecto - Tenant: {$tenantUuid} */\n:root { --color-1: #000000; --color-2: #ffffff; }";
         }
 
         return response($css, 200)
             ->header('Content-Type', 'text/css')
-            ->header('X-Tenant', $website ? $website->uuid : 'central');
+            ->header('X-Tenant', $tenantUuid);
 
     } catch (\Exception $e) {
-        // En caso de error, devolver CSS vacío
         return response("/* Error cargando CSS: {$e->getMessage()} */", 200)
             ->header('Content-Type', 'text/css');
     }
@@ -2162,9 +2091,7 @@ public function getTenantCss()
 public function getThemeData()
 {
 
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
     
-    if ($website) {
         $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
         $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_theme::class;
         $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
@@ -2172,14 +2099,7 @@ public function getThemeData()
         // Para tenant, puedes filtrar por website_id si es necesario
         $template = $templateModel::first();
         $theme = $themeModel::first();
-    } else {
-        $templateModel = Cms_Template::class;
-        $themeModel = Cms_theme::class;
-        $variableModel = Cms_variable::class;
-        
-        $template = $templateModel::first();
-        $theme = $themeModel::first();
-    }
+
 
     // El resto de la lógica permanece igual...
     if (!$theme && $template) {
@@ -2239,52 +2159,43 @@ public function getThemeData()
 
 public function themeCss()
 {
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
-    
-    if ($website) {
-        $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_theme::class;
-        $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
-        
-        // Si los modelos tenant necesitan filtrar por website_id
-        $theme = $themeModel::where('website_id', $website->id)->first() 
-               ?? $variableModel::where('website_id', $website->id)->first();
-    } else {
-        $themeModel = Cms_theme::class;
-        $variableModel = Cms_variable::class;
-        
-        $theme = $themeModel::first() ?? $variableModel::first();
-    }
+    $isTenant = tenancy()->initialized;
 
-    if (!$theme) {
+    $themeModel    = $isTenant
+        ? \Sitedigitalweb\Pagina\Tenant\Cms_theme::class
+        : \Sitedigitalweb\Pagina\Cms_theme::class;
+
+    $variableModel = $isTenant
+        ? \Sitedigitalweb\Pagina\Tenant\Cms_variable::class
+        : \Sitedigitalweb\Pagina\Cms_variable::class;
+
+    // En Stancl no necesitas filtrar por website_id
+    $theme = $themeModel::first() ?? $variableModel::first();
+
+    if (! $theme) {
         abort(404, 'Tema no configurado');
     }
 
-    // Resto del código para generar CSS permanece igual...
-    $css = "";
-    
-    // ======================
-    // DEFINIR VARIABLES EN :root
-    // ======================
-    $css .= ":root {\n";
+    $css  = ":root {\n";
+
     for ($i = 1; $i <= 4; $i++) {
-        $colorValue = $theme->{'color_'.$i} ?? null;
+        $colorValue = $theme->{'color_' . $i} ?? null;
         if ($colorValue) {
             $css .= "    --color-{$i}: {$colorValue};\n";
         }
     }
+
     for ($i = 1; $i <= 5; $i++) {
-        $sizeValue = $theme->{'size_h'.$i} ?? 16;
-        $fontValue = $theme->{'font_h'.$i} ?? 'Roboto';
+        $sizeValue = $theme->{'size_h' . $i} ?? 16;
+        $fontValue = $theme->{'font_h' . $i} ?? 'Roboto';
         $css .= "    --font-h{$i}: '{$fontValue}', sans-serif;\n";
         $css .= "    --size-h{$i}: {$sizeValue}px;\n";
     }
+
     $css .= "}\n\n";
 
-    // ======================
-    // CLASES DE COLORES
-    // ======================
     for ($i = 1; $i <= 4; $i++) {
-        $colorClass = $theme->{'var_color_'.$i} ?? null;
+        $colorClass = $theme->{'var_color_' . $i} ?? null;
         if ($colorClass) {
             $css .= ".{$colorClass} { background: var(--color-{$i}) !important; }\n";
         }
@@ -2292,12 +2203,8 @@ public function themeCss()
 
     $css .= "\n";
 
-    // ======================
-    // TIPOGRAFÍAS Y TAMAÑOS
-    // ======================
     for ($i = 1; $i <= 5; $i++) {
-        $fontClass = $theme->{'var_font_h'.$i} ?? 'h'.$i;
-
+        $fontClass = $theme->{'var_font_h' . $i} ?? 'h' . $i;
         $css .= "{$fontClass} {\n";
         $css .= "    font-family: var(--font-h{$i}) !important;\n";
         $css .= "    font-size: var(--size-h{$i}) !important;\n";
@@ -2309,18 +2216,11 @@ public function themeCss()
 
 public function generateThemeCss()
 {
-    // Detectar si estamos en un tenant
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
     
-    if ($website) {
         $themeModel = \Sitedigitalweb\Pagina\Tenant\Cms_theme::class;
         $variableModel = \Sitedigitalweb\Pagina\Tenant\Cms_variable::class;
         $templateModel = \Sitedigitalweb\Pagina\Tenant\Cms_Template::class;
-    } else {
-        $themeModel = Cms_theme::class;
-        $variableModel = Cms_variable::class;
-        $templateModel = Cms_Template::class;
-    }
+    
 
     $theme = $themeModel::first() ?? $variableModel::first();
 
@@ -2421,16 +2321,9 @@ public function actualizarTemplate(Request $request)
 {
     try {
         $templateId = $request->input('template');
-         $website = app(\Hyn\Tenancy\Environment::class)->website();
-
-           // Si estamos en tenant, simplemente usamos la base del tenant
-        if ($website) {
+        
         $registro = \Sitedigitalweb\Pagina\Tenant\Cms_Template::first(); // Aquí no hay website_id
-        } else {
-        // En la base central, también usamos sin filtro
-        $registro = Cms_Template::first(); // O con filtro si tú creaste website_id
-        }
-
+        
 
         if ($registro) {
             $registro->update([
@@ -2480,75 +2373,57 @@ private function isJson($string)
     return json_last_error() === JSON_ERROR_NONE;
 }
     // Guardar plantilla
-  public function store(Request $request)
+ public function store(Request $request)
 {
-    // Registrar en el log todo el contenido de la solicitud entrante
     \Log::debug('Request Data:', $request->all());
- 
-    // Validar los datos del request con reglas específicas
+
     $validated = $request->validate([
-        'name'    => 'required|string|max:255', // El nombre es obligatorio y debe ser un string corto
-        'content' => 'required', // El contenido puede ser un string o un array
-        'styles'  => 'nullable|array', // Los estilos son opcionales y deben ser un array si están presentes
-        'scripts' => 'nullable', // Los scripts pueden venir por separado como string
-        'assets'  => 'nullable|array', // Los assets son opcionales y deben ser un array
-        'id'      => 'nullable|integer' // El ID puede venir si se está actualizando una página existente
+        'name'    => 'required|string|max:255',
+        'content' => 'required',
+        'styles'  => 'nullable|array',
+        'scripts' => 'nullable',
+        'assets'  => 'nullable|array',
+        'id'      => 'nullable|integer',
     ]);
-    
-    // Si el contenido es un array (por ejemplo, estructuras JSON complejas), se convierte a string
+
     $contentHtml = is_array($validated['content'])
         ? json_encode($validated['content'])
         : $validated['content'];
 
-    // Inicializa el contenido sin scripts, inicialmente igual al contenido completo
     $contentWithoutScripts = $contentHtml;
+    $scripts               = $validated['scripts'] ?? null;
 
-    // Se obtiene el valor de 'scripts' si fue enviado explícitamente
-    $scripts = $validated['scripts'] ?? null;
-
-    // Si no se envió 'scripts', pero el contenido incluye etiquetas <script>, se extraen con regex
-    if (!$scripts && is_string($contentHtml)) {
+    if (! $scripts && is_string($contentHtml)) {
         if (preg_match_all('/<script\b[^>]*>(.*?)<\/script>/is', $contentHtml, $matches)) {
-            $scripts = implode("\n", $matches[0]); // Concatenar todos los bloques <script> encontrados
-            // Eliminar los bloques <script> del HTML para guardar una versión limpia
+            $scripts               = implode("\n", $matches[0]);
             $contentWithoutScripts = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $contentHtml);
         }
     }
 
-    // Preparar los datos para guardar en la base de datos
     $pageData = [
         'name'    => $validated['name'],
         'content' => $contentWithoutScripts,
         'styles'  => $validated['styles'],
         'assets'  => $validated['assets'] ?? null,
         'scripts' => $scripts,
-        'theme'   => $validated['theme'] ?? null // 
+        'theme'   => $validated['theme'] ?? null,
     ];
 
-    // Obtener el contexto del sitio actual (multi-tenant)
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    // ✅ Stancl — la DB ya está aislada, no necesitas website_id
+    $isTenant  = tenancy()->initialized;
+    $pageModel = $isTenant
+        ? \Sitedigitalweb\Pagina\Tenant\Page::class
+        : \Sitedigitalweb\Pagina\Page::class;
 
-    // Determinar el modelo que se usará, según si hay un tenant o no
-    $pageModel = $website ? \Sitedigitalweb\Pagina\Tenant\Page::class : Page::class;
+    $template = $pageModel::updateOrCreate(
+        ['id' => $validated['id'] ?? null],
+        $pageData
+    );
 
-    // Crear o actualizar la página en base al ID (si está presente) y al website actual
-    if ($website) {
-        $template = $pageModel::updateOrCreate(
-            ['id' => $validated['id'] ?? null],
-            $pageData + ['website_id' => $website->id]
-        );
-    } else {
-        $template = $pageModel::updateOrCreate(
-            ['id' => $validated['id'] ?? null],
-            $pageData
-        );
-    }
-
-    // Devolver respuesta exitosa con ID del template y URL de vista previa
     return response()->json([
         'success'     => true,
         'id'          => $template->id,
-        'preview_url' => route('preview', $template->id)
+        'preview_url' => route('preview', $template->id),
     ]);
 }
 
@@ -2556,33 +2431,29 @@ private function isJson($string)
     // Cargar plantilla
 public function load($id)
 {
-    // Detectar si estamos dentro de un tenant
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
+    // Detectar si estamos dentro de un tenant (Stancl Tenancy)
+    $isTenant = tenancy()->initialized;
 
     // Seleccionar el modelo correcto según el contexto
-    $pageModel = $website 
-        ? \Sitedigitalweb\Pagina\Tenant\Page::class 
-        : Page::class;
+    $pageModel = $isTenant
+        ? \Sitedigitalweb\Pagina\Tenant\Page::class
+        : \Sitedigitalweb\Pagina\Page::class;
 
     // Construir la consulta
-    $query = $pageModel::where('id', $id);
-
-    // Aplicar filtro solo si estamos en un tenant y el modelo tiene 'website_id'
-    if ($website && Schema::hasColumn((new $pageModel)->getTable(), 'website_id')) {
-        $query->where('website_id', $website->id);
-    }
-
-    // Obtener la plantilla o fallar
-    $template = $query->firstOrFail();
+    $template = $pageModel::where('id', $id)->firstOrFail();
 
     // Preparar componentes
     $components = $this->prepareComponentsForEditor(
-        is_string($template->content) ? json_decode($template->content, true) : ($template->content ?? [])
+        is_string($template->content)
+            ? json_decode($template->content, true)
+            : ($template->content ?? [])
     );
 
     // Preparar estilos
     $styles = $this->prepareStylesForEditor(
-        is_string($template->styles) ? json_decode($template->styles, true) : ($template->styles ?? [])
+        is_string($template->styles)
+            ? json_decode($template->styles, true)
+            : ($template->styles ?? [])
     );
 
     // Retornar la respuesta JSON
@@ -2590,7 +2461,7 @@ public function load($id)
         'gjs-components' => $components,
         'gjs-styles'     => $styles,
         'gjs-assets'     => $template->assets ?? [],
-        'tenant_id'      => $website->id ?? null,
+        'tenant_id'      => $isTenant ? tenant('id') : null,
     ]);
 }
 
@@ -2903,86 +2774,58 @@ protected function createAccordionItem($index, $show = false)
 }
 
 
-public function upload(Request $request){
-
-$dominio =  $_SERVER['HTTP_HOST'];
-$hostname = DB::table('tenancy.hostnames')->where('fqdn','=',$dominio)->get();
-
-foreach ($hostname as $hostname) {
- $websites = DB::table('tenancy.websites')->where('id','=',$hostname->website_id)->get();   
-}
-foreach($websites as $websites){
-$salida = $websites->uuid;
-}
-
-
-    if($_FILES)
+public function upload(Request $request)
 {
-    
-$resultArray = array();
-    foreach ( $_FILES as $file){
+    $isTenant   = tenancy()->initialized;
+    $tenantUuid = $isTenant ? tenant('id') : 'default';
 
-                $fileName = $file['name'];
-                $tmpName = $file['tmp_name'];
-                $fileSize = $file['size'];
-                $fileType = $file['type'];
-                if ($file['error'] != UPLOAD_ERR_OK)
-                {
-                        error_log($file['error']);
-                        echo JSON_encode(null);
-                }
-                $fp = fopen($tmpName, 'r');
-                $content = fread($fp, filesize($tmpName));
-                fclose($fp);
-                $webps = $file['name'];
-                 $new_webps = preg_replace('"\.(jpg|jpeg|png|webp)$"', '.webp', $webps);
-                $result=array(
-                        'name'=>$new_webps,
-                        'type'=>'image',
-                        'src'=>"/saas"."/".$salida."/".$new_webps,
-                        'height'=>350,
-                        'width'=>250
-                ); 
+    $grapeImageModel = $isTenant
+        ? \Sitedigitalweb\Pagina\Tenant\GrapeImage::class
+        : \Sitedigitalweb\Pagina\GrapeImage::class;
 
-
-        $img = $file['name'];
-        $extension = \File::extension($img);
-        if(in_array($extension,["jpeg","jpg","png","webp"])){
-    //old image
-            $webp = $file['name'];
-            $new_webp = preg_replace('"\.(jpg|jpeg|png|webp)$"', '.webp', $webp);
-
-    
-    $uploadDir = public_path('saas/'.$salida);
-
-      $uploadDirsave = '/saas/'.$salida.'/'.$new_webp;
-$targetPath = $uploadDir.'/'. $new_webp;
-$lata = move_uploaded_file($tmpName, $targetPath);
+    if (! $_FILES) {
+        return response()->json(['error' => 'No se enviaron archivos'], 400);
     }
 
-if(!$this->tenantName){
- GrapeImage::insert([
-  'image' => $uploadDirsave
- ]);
-}else{
-\Sitedigitalweb\Pagina\Tenant\GrapeImage::insert([
-  'image' => $uploadDirsave
- ]);
-}
+    $resultArray = [];
 
-           
+    foreach ($_FILES as $file) {
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            \Log::error('Error subiendo archivo: ' . $file['error']);
+            continue;
+        }
 
-         
+        $img       = $file['name'];
+        $extension = \Illuminate\Support\Facades\File::extension($img);
 
-                array_push($resultArray,$result);
-    }    
-$response = array( 'data' => $resultArray );
-echo json_encode($response);
-}
+        if (! in_array($extension, ['jpeg', 'jpg', 'png', 'webp'])) {
+            continue;
+        }
 
+        $newWebp   = preg_replace('"\.(jpg|jpeg|png|webp)$"', '.webp', $img);
+        $uploadDir = public_path('saas/' . $tenantUuid);
+        $savePath  = '/saas/' . $tenantUuid . '/' . $newWebp;
+        $targetPath = $uploadDir . '/' . $newWebp;
+
+        if (! \Illuminate\Support\Facades\File::exists($uploadDir)) {
+            \Illuminate\Support\Facades\File::makeDirectory($uploadDir, 0755, true);
+        }
+
+        move_uploaded_file($file['tmp_name'], $targetPath);
+
+        $grapeImageModel::insert(['image' => $savePath]);
+
+        $resultArray[] = [
+            'name'   => $newWebp,
+            'type'   => 'image',
+            'src'    => '/saas/' . $tenantUuid . '/' . $newWebp,
+            'height' => 350,
+            'width'  => 250,
+        ];
     }
 
-
+    return response()->json(['data' => $resultArray]);
+}
 
     
 }

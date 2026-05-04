@@ -8,21 +8,19 @@ use Sitedigitalweb\Gestion\CmsEmbudo;
 
 class CountryController extends Controller
 {
-    protected $tenantName = null;
+    protected ?string $tenantName = null;
+protected bool $isTenant = false;
 
-    public function __construct()
-    {
-        if (!session()->has('cart')) {
-            session()->put('cart', []);
-        }
+public function __construct()
+{
+ 
 
-        $hostname = app(\Hyn\Tenancy\Environment::class)->hostname();
-        if ($hostname) {
-            $fqdn = $hostname->fqdn;
-            $this->tenantName = explode(".", $fqdn)[0];
-        }
+    // ✅ Stancl Tenancy
+    if (tenancy()->initialized) {
+        $this->isTenant   = true;
+        $this->tenantName = tenant('id');
     }
-
+}
     private function resolveModel()
     {
         return $this->tenantName
@@ -34,6 +32,7 @@ class CountryController extends Controller
     {
     $model = $this->resolveModel();
     $pais = $model::all();
+
       return view('pagina::country.index', compact('pais'));
     }
 

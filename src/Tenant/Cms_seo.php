@@ -2,20 +2,35 @@
 
 namespace Sitedigitalweb\Pagina\Tenant;
 
-use Hyn\Tenancy\Traits\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Model;
-
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class Cms_seo extends Model
 {
-	use UsesTenantConnection;
-	protected $table = 'cms_seo';
-	public $timestamps = true;
+    use BelongsToTenant;
 
-	protected $fillable = [
-    'idioma', 'canonical', 'robots', 'og_type', 'og_image', 'og_url',
-    'og_title', 'og_name', 'og_description', 'twitter_card', 'twitter_site',
-    'twitter_creator', 'twitter_title', 'twitter_description', 'twitter_image',
-    'analitica', 'ads', 'ico', 'icoapple'
-];
+    protected $table = 'cms_seo';
+
+    protected $fillable = [
+        'tenant_id',
+        'robots',
+        'og_type',
+        'og_image',
+        'og_url',
+        'og_title',
+        'og_description',
+        'og_name',
+        'twitter_card',
+        'twitter_site',
+        'twitter_creator',
+        'twitter_title',
+        'twitter_description',
+        'twitter_image',
+        'canonical',
+        'idioma',
+        'ico',
+        'icoapple',
+        'analitica',
+        'ads',
+    ];
 }

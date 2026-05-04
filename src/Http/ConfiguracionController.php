@@ -30,17 +30,19 @@ use Sitedigitalweb\Pagina\Cms_seo;
 class ConfiguracionController extends Controller
 {
 
-    protected $tenantName = null;
+protected ?string $tenantName = null;
+protected bool $isTenant = false;
 
- public function __construct(){
-  $this->middleware('auth');
+public function __construct()
+{
+ 
 
-  $hostname = app(\Hyn\Tenancy\Environment::class)->hostname();
-        if ($hostname){
-            $fqdn = $hostname->fqdn;
-            $this->tenantName = explode(".", $fqdn)[0];
-        }
- }
+    // ✅ Stancl Tenancy
+    if (tenancy()->initialized) {
+        $this->isTenant   = true;
+        $this->tenantName = tenant('id');
+    }
+}
 
     
     /**
@@ -633,9 +635,9 @@ class ConfiguracionController extends Controller
 
     public function departamentos($id) {
     if(!$this->tenantName){
-    $departamentos = Departamentocon::where('pais_id','=', $id)->get();
+    $departamentos = Cms_departamento::where('pais_id','=', $id)->get();
     }else{
-        $departamentos = \DigitalsiteSaaS\Pagina\Tenant\Departamentocon::where('pais_id','=', $id)->get(); 
+        $departamentos = \Sitedigitalweb\Pagina\Tenant\Cms_departamento::where('pais_id','=', $id)->get(); 
     }
     return view('pagina::configuracion.departamentos')->with('departamentos',$departamentos);
 }

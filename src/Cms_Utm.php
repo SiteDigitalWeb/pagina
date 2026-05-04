@@ -2,14 +2,17 @@
 
 namespace Sitedigitalweb\Pagina;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
-class Cms_Utm extends Model
+class Cms_utm extends Model
 {
-    use HasFactory;
+    use BelongsToTenant;
+
     protected $table = 'cms_utms';
+
     protected $fillable = [
+        'tenant_id',
         'campaign_name',
         'source',
         'medium',

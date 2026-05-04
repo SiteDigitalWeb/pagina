@@ -18,16 +18,9 @@ class SmtpConfigController extends Controller
      */
      public function index()
 {
-    // Detectar si estamos en un tenant
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
 
-    // Si estamos en tenant, obtener configuración del tenant actual
-    if ($website) {
         $config = \Sitedigitalweb\Pagina\Tenant\Cms_smtp_configs::first();
-    } else {
-        // En la base central, obtener configuración global
-        $config = Cms_smtp_configs::first();
-    }
+   
 
     return view('pagina::smtp.index', compact('config'));
 }
@@ -38,6 +31,7 @@ class SmtpConfigController extends Controller
      */
     public function store(Request $request)
     {
+      
         try {
             // Validación más detallada
             $validator = Validator::make($request->all(), [
@@ -74,21 +68,15 @@ class SmtpConfigController extends Controller
             }
 
             // Detectar si estamos en un tenant
-            $website = app(\Hyn\Tenancy\Environment::class)->website();
+           
 
             // Si estamos en tenant, usar el modelo del tenant
-            if ($website) {
+           
             $config = \Sitedigitalweb\Pagina\Tenant\Cms_smtp_configs::updateOrCreate(
                 ['id' => 1], 
             $validator->validated()
             );
-            } else {
-            // En la base central, usar el modelo global
-            $config = Cms_smtp_configs::updateOrCreate(
-            ['id' => 1], 
-            $validator->validated()
-            );
-            }
+           
 
             if (!$config) {
                 return back()
@@ -255,14 +243,12 @@ public function sendTestMail(Request $request)
         }
 
         // Detectar si estamos en un tenant
-        $website = app(\Hyn\Tenancy\Environment::class)->website();
+        
 
         // Obtener configuración según el contexto
-        if ($website) {
+        
             $config = \Sitedigitalweb\Pagina\Tenant\Cms_smtp_configs::first();
-        } else {
-            $config = Cms_smtp_configs::first();
-        }
+       
         
         if (!$config) {
             return redirect()

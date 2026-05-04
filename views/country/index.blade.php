@@ -131,7 +131,7 @@
                                             <td class="text-center">{{$pais->pais}}</td>
                                             <td class="text-center">
                                                 <div class="btn-group">
-                                                  <a href="<?=URL::to('gestion/ubicacion/departamentos/');?>/{{ $pais->id }}"><span  id="tip" data-toggle="tooltip" data-placement="left" title="Ver Ciudades" class="btn btn-warning"><i class="fa fa-eye"></i></span></a>
+                                                  <a href="<?=URL::to('/sd/departamentos/');?>/{{ $pais->id }}"><span  id="tip" data-toggle="tooltip" data-placement="left" title="Ver Ciudades" class="btn btn-warning"><i class="fa fa-eye"></i></span></a>
                                                    <a href="{{ route('sd.country.edit', $pais->id) }}">
   <span id="tip" data-toggle="tooltip" data-placement="left"
         title="Editar producto y/o servicio" class="btn btn-primary">

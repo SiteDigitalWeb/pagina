@@ -90,24 +90,31 @@
                                    
 
                                     <!-- Basic Form Elements Content -->
-                                     {{ Form::open(array('method' => 'POST','class' => 'form-horizontal','id' => 'defaultForm', 'url' => array('sd/country'))) }}
+                                     <form method="POST" action="{{ url('sd/country') }}" class="form-horizontal" id="defaultForm">
+    @csrf
 
-                                        
-                                        <div class="form-group">
-                                            <label class="col-md-3 control-label" for="example-text-input">Nombre</label>
-                                            <div class="col-md-9">
-                                                {{Form::text('pais', '', array('class' => 'form-control','placeholder'=>'Ingrese País','required' => 'required'))}}
-                                            </div>
-                                        </div>
+    <div class="form-group">
+        <label class="col-md-3 control-label">Nombre</label>
+        <div class="col-md-9">
+            <input type="text" name="pais" value=""
+                class="form-control"
+                placeholder="Ingrese País"
+                required>
+        </div>
+    </div>
 
+    <div class="form-group form-actions">
+        <div class="col-md-9 col-md-offset-3">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="fa fa-angle-right"></i> Crear
+            </button>
+            <button type="reset" class="btn btn-sm btn-warning">
+                <i class="fa fa-repeat"></i> Cancelar
+            </button>
+        </div>
+    </div>
 
-                                        <div class="form-group form-actions">
-                                            <div class="col-md-9 col-md-offset-3">
-                                                <button type="submit" class="btn btn-sm btn-primary"><i class="fa fa-angle-right"></i> Crear</button>
-                                                <button type="reset" class="btn btn-sm btn-warning"><i class="fa fa-repeat"></i> Cancelar</button>
-                                            </div>
-                                        </div>
-                                    {{ Form::close() }}
+</form>
           
                                 </div>
                                 <!-- END Basic Form Elements Block -->

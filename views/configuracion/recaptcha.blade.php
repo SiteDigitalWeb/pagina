@@ -2,8 +2,8 @@
 
     @section('cabecera')
     @parent
-     {{ Html::style('//cdn.datatables.net/plug-ins/be7019ee387/integration/bootstrap/3/dataTables.bootstrap.css') }}
-     {{ Html::style('//cdnjs.cloudflare.com/ajax/libs/jquery.bootstrapvalidator/0.5.0/css/bootstrapValidator.min.css') }}
+    <link rel="stylesheet" href="//cdn.datatables.net/plug-ins/be7019ee387/integration/bootstrap/3/dataTables.bootstrap.css">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jquery.bootstrapvalidator/0.5.0/css/bootstrapValidator.min.css">
     @stop
 
 @section('ContenidoSite-01')
@@ -64,30 +64,42 @@
                             
                                     <!-- Basic Form Elements Content -->
                                    
-                                     {{ Form::open(['files' => true,'method' => 'POST','class' => 'form-horizontal','id' => 'defaultForm', 'url' => ['/sd/update-recaptcha']]) }}
+                                     <form method="POST" action="{{ url('/sd/update-recaptcha') }}" class="form-horizontal" id="defaultForm" enctype="multipart/form-data">
+    @csrf
 
-<div class="form-group">
-    <label class="col-md-3 control-label">Public key</label>
-    <div class="col-md-9">
-         {{ Form::text('publickey', $dato->site_key, ['class' => 'form-control', 'placeholder' => 'Ingrese public_key']) }}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Public key</label>
+        <div class="col-md-9">
+            <input type="text"
+                name="publickey"
+                value="{{ $dato->site_key }}"
+                class="form-control"
+                placeholder="Ingrese public_key">
+        </div>
     </div>
-</div>
 
-<div class="form-group">
-    <label class="col-md-3 control-label">Private key</label>
-    <div class="col-md-9">
-         {{ Form::text('privatekey', $dato->secret_key, ['class' => 'form-control', 'placeholder' => 'Ingrese private_key']) }}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Private key</label>
+        <div class="col-md-9">
+            <input type="text"
+                name="privatekey"
+                value="{{ $dato->secret_key }}"
+                class="form-control"
+                placeholder="Ingrese private_key">
+        </div>
     </div>
-</div>
 
-<div class="form-group form-actions">
-    <div class="col-md-9 col-md-offset-3">
-        <button type="submit" class="btn btn-sm btn-primary"><i class="fa fa-angle-right"></i> Editar</button>
-        <button type="reset" class="btn btn-sm btn-warning"><i class="fa fa-repeat"></i> Cancelar</button>
+    <div class="form-group form-actions">
+        <div class="col-md-9 col-md-offset-3">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="fa fa-angle-right"></i> Editar
+            </button>
+            <button type="reset" class="btn btn-sm btn-warning">
+                <i class="fa fa-repeat"></i> Cancelar
+            </button>
+        </div>
     </div>
-</div>
-
-{{ Form::close() }}
+</form>
 
                                  
                                 </div>
@@ -102,11 +114,10 @@
 
   <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
 
-  {{ Html::script('Usuario/js/valida.js') }}
-  {{ Html::script('//cdnjs.cloudflare.com/ajax/libs/jquery.bootstrapvalidator/0.5.0/js/bootstrapValidator.min.js') }} 
- 
-  {{ Html::script('//cdn.datatables.net/1.10.1/js/jquery.dataTables.min.js') }}
-  {{ Html::script('//cdn.datatables.net/plug-ins/be7019ee387/integration/bootstrap/3/dataTables.bootstrap.js') }}
+  <script src="{{ asset('Usuario/js/valida.js') }}"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery.bootstrapvalidator/0.5.0/js/bootstrapValidator.min.js"></script>
+<script src="//cdn.datatables.net/1.10.1/js/jquery.dataTables.min.js"></script>
+<script src="//cdn.datatables.net/plug-ins/be7019ee387/integration/bootstrap/3/dataTables.bootstrap.js"></script>
     
 
   <script>

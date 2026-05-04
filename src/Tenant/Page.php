@@ -1,19 +1,20 @@
 <?php
 
 namespace Sitedigitalweb\Pagina\Tenant;
-
-use Hyn\Tenancy\Traits\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Model;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant; // ← esta línea faltaba
 
 class Page extends Model
 {
-  
- use UsesTenantConnection;
+  use BelongsToTenant; // ← agregar
+
  protected $table = 'cms_pages';
 
  protected $fillable = [
+        'tenant_id',  // ← agregar
         'page', // Agrega esto junto con los demás campos asignables
         'slug',
+        'slugcon',
         'title',
         'description',
         'keywords',
@@ -37,7 +38,8 @@ class Page extends Model
         'content' => 'array',
         'styles' => 'array',
         'scripts' => 'array',
-        'assets' => 'array', // scripts como texto plano (puede contener código JS)
+        'assets' => 'array',
+        'theme'  => 'array', // scripts como texto plano (puede contener código JS)
     ];
 
   public $timestamps = true;
@@ -91,4 +93,3 @@ public function getIsProtectedAttribute()
     }
 
 }
-

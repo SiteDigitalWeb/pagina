@@ -82,7 +82,9 @@
     <link rel="preload" href="/partials/estilos/estiloscomponentes.css" as="style">
 
     <!-- ESTILOS -->
-    @include($web->template.'.assets-web.assets-preview')
+
+    @include($web->template . '.assets-web.assets-preview')
+
     <link rel="stylesheet" href="/partials/estilos/estiloscomponentes.css"/>
 
 

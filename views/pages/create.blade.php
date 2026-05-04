@@ -67,273 +67,226 @@
                     <h2><strong>Crear</strong> página</h2>
                 </div>
                 
-                {{ Form::open([
-                    'method' => 'POST',
-                    'class' => 'form-horizontal',
-                    'id' => 'pageForm',
-                    'url' => 'sd/create-page'
-                ]) }}
-                
-                <!-- Campos del formulario -->
-                
-         <div class="form-group">
-    <label class="col-md-3 control-label">Nombre página</label>
-    <div class="col-md-9">
-        {{ Form::text('page', old('page'), [
-            'class' => 'form-control' . ($errors->has('page') ? ' is-invalid' : ''),
-            'placeholder' => 'Ingrese nombre de la página',
-            'maxlength' => '50',
-            'required',
-            'id' => 'page'
-        ]) }}
-        @if($errors->has('page'))
-            <div class="invalid-feedback">
-                {{ $errors->first('page') }}
-            </div>
-        @endif
-    </div>
-</div>
+                <form method="POST" action="{{ url('sd/create-page') }}" class="form-horizontal" id="pageForm">
+    @csrf
 
-<div class="form-group">
-    <label class="col-md-3 control-label">URL Página</label>
-    <div class="col-md-9">
-        {{ Form::text('slug', old('slug'), [
-            'class' => 'form-control' . ($errors->has('slug') ? ' is-invalid' : ''),
-            'placeholder' => 'Ingrese URL de la página',
-            'maxlength' => '50',
-            'required',
-            'id' => 'slug'
-        ]) }}
-        @if($errors->has('slug'))
-            <div class="invalid-feedback">
-                {{ $errors->first('slug') }}
-            </div>
-        @endif
-    </div>
-</div>
-
-<div class="form-group">
-    <label class="col-md-3 control-label">Título</label>
-    <div class="col-md-9">
-        {{ Form::text('title', old('title'), [
-            'class' => 'form-control' . ($errors->has('title') ? ' is-invalid' : ''),
-            'placeholder' => 'Ingrese título de la página',
-            'maxlength' => '55',
-            'required',
-            'id' => 'title'
-        ]) }}
-        @if($errors->has('title'))
-            <div class="invalid-feedback">
-                {{ $errors->first('title') }}
-            </div>
-        @endif
-    </div>
-</div>
-
-<div class="form-group">
-    <label class="col-md-3 control-label">Palabras clave</label>
-    <div class="col-md-9">
-        {{ Form::text('keywords', old('keywords'), [
-            'class' => 'form-control' . ($errors->has('keywords') ? ' is-invalid' : ''),
-            'placeholder' => 'Ingrese palabras clave',
-            'maxlength' => '150',
-            'id' => 'keywords'
-        ]) }}
-        @if($errors->has('keywords'))
-            <div class="invalid-feedback">
-                {{ $errors->first('keywords') }}
-            </div>
-        @endif
-    </div>
-</div>
-
-<div class="form-group">
-    <label class="col-md-3 control-label">Descripción</label>
-    <div class="col-md-9">
-        {{ Form::textarea('description', old('description'), [
-            'class' => 'form-control' . ($errors->has('description') ? ' is-invalid' : ''),
-            'placeholder' => 'Ingrese descripción',
-            'maxlength' => '159',
-            'rows' => 3,
-            'id' => 'description'
-        ]) }}
-        @if($errors->has('description'))
-            <div class="invalid-feedback">
-                {{ $errors->first('description') }}
-            </div>
-        @endif
-    </div>
-</div>
-
-<div class="form-group">
-    <label class="col-md-3 control-label">Tipo menú</label>
-    <div class="col-md-9">
-        <div class="radio">
-            <label>
-                {{ Form::radio('menu_type', '1', old('menu_type', '1') == '1', ['id' => 'menu_type1']) }}
-                Menú principal
-            </label>
+    {{-- Nombre página --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Nombre página</label>
+        <div class="col-md-9">
+            <input type="text" name="page" id="page"
+                value="{{ old('page') }}"
+                class="form-control {{ $errors->has('page') ? 'is-invalid' : '' }}"
+                placeholder="Ingrese nombre de la página"
+                maxlength="50" required>
+            @error('page')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
         </div>
-        <div class="radio">
-            <label>
-                {{ Form::radio('menu_type', '2', old('menu_type') == '2', ['id' => 'menu_type2']) }}
-                Sub-menú
-            </label>
+    </div>
+
+    {{-- URL --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">URL Página</label>
+        <div class="col-md-9">
+            <input type="text" name="slug" id="slug"
+                value="{{ old('slug') }}"
+                class="form-control {{ $errors->has('slug') ? 'is-invalid' : '' }}"
+                placeholder="Ingrese URL de la página"
+                maxlength="50" required>
+            @error('slug')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
         </div>
-        @if($errors->has('menu_type'))
-            <div class="invalid-feedback" style="display: block;">
-                {{ $errors->first('menu_type') }}
-            </div>
-        @endif
     </div>
-</div>
 
-<div class="form-group">
-    <label class="col-md-3 control-label">Posición</label>
-    <div class="col-md-9">
-        {{ Form::number('position', old('position', 1), [
-            'class' => 'form-control' . ($errors->has('position') ? ' is-invalid' : ''),
-            'min' => '1',
-            'required',
-            'id' => 'position'
-        ]) }}
-        @if($errors->has('position'))
-            <div class="invalid-feedback">
-                {{ $errors->first('position') }}
-            </div>
-        @endif
+    {{-- Título --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Título</label>
+        <div class="col-md-9">
+            <input type="text" name="title" id="title"
+                value="{{ old('title') }}"
+                class="form-control {{ $errors->has('title') ? 'is-invalid' : '' }}"
+                placeholder="Ingrese título de la página"
+                maxlength="55" required>
+            @error('title')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
     </div>
-</div>
 
-
-        {{ Form::hidden('page_id', old('page_id', request()->segment(3)), [
-            'class' => 'form-control' . ($errors->has('position') ? ' is-invalid' : ''),
-            'min' => '1',
-            'id' => 'page_id'
-        ]) }}
-
-
-
-<div class="form-group">
-    <label class="col-md-3 control-label">Visibilidad</label>
-    <div class="col-md-9">
-        {{ Form::select('visibility', [
-            '1' => 'Visible',
-            '0' => 'No visible'
-        ], old('visibility'), [
-            'class' => 'form-control' . ($errors->has('visibility') ? ' is-invalid' : ''),
-            'id' => 'visibility'
-        ]) }}
-        @if($errors->has('visibility'))
-            <div class="invalid-feedback">
-                {{ $errors->first('visibility') }}
-            </div>
-        @endif
+    {{-- Palabras clave --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Palabras clave</label>
+        <div class="col-md-9">
+            <input type="text" name="keywords" id="keywords"
+                value="{{ old('keywords') }}"
+                class="form-control {{ $errors->has('keywords') ? 'is-invalid' : '' }}"
+                placeholder="Ingrese palabras clave"
+                maxlength="150">
+            @error('keywords')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
     </div>
-</div>
 
-<div class="form-group">
-    <label class="col-md-3 control-label">Visibilidad Ecommerce</label>
-    <div class="col-md-9">
-        {{ Form::select('visibility_ecommerce', [
-            '1' => 'Visible',
-            '0' => 'No visible'
-        ], old('visibility_ecommerce'), [
-            'class' => 'form-control' . ($errors->has('visibility_ecommerce') ? ' is-invalid' : ''),
-            'id' => 'visibility_ecommerce'
-        ]) }}
-        @if($errors->has('visibility_ecommerce'))
-            <div class="invalid-feedback">
-                {{ $errors->first('visibility_ecommerce') }}
-            </div>
-        @endif
+    {{-- Descripción --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Descripción</label>
+        <div class="col-md-9">
+            <textarea name="description" id="description" rows="3"
+                class="form-control {{ $errors->has('description') ? 'is-invalid' : '' }}"
+                placeholder="Ingrese descripción"
+                maxlength="159">{{ old('description') }}</textarea>
+            @error('description')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
     </div>
-</div>
 
-<div class="form-group">
-    <label class="col-md-3 control-label">Visibilidad Blog</label>
-    <div class="col-md-9">
-        {{ Form::select('visibility_blog', [
-            '1' => 'Visible',
-            '0' => 'No visible'
-        ], old('visibility_blog'), [
-            'class' => 'form-control' . ($errors->has('visibility_blog') ? ' is-invalid' : ''),
-            'id' => 'visibility_blog'
-        ]) }}
-        @if($errors->has('visibility_blog'))
-            <div class="invalid-feedback">
-                {{ $errors->first('visibility_blog') }}
+    {{-- Tipo menú --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Tipo menú</label>
+        <div class="col-md-9">
+            <div class="radio">
+                <label>
+                    <input type="radio" name="menu_type" id="menu_type1"
+                        value="1" {{ old('menu_type', '1') == '1' ? 'checked' : '' }}>
+                    Menú principal
+                </label>
             </div>
-        @endif
+            <div class="radio">
+                <label>
+                    <input type="radio" name="menu_type" id="menu_type2"
+                        value="2" {{ old('menu_type') == '2' ? 'checked' : '' }}>
+                    Sub-menú
+                </label>
+            </div>
+            @error('menu_type')
+                <div class="invalid-feedback" style="display:block">{{ $message }}</div>
+            @enderror
+        </div>
     </div>
-</div>
 
-<div class="form-group">
-    <label class="col-md-3 control-label">Idioma</label>
-    <div class="col-md-9">
-        {{ Form::select('language', [
-            'ne' => 'Neutro',
-            'es' => 'Español',
-            'en' => 'Inglés',
-            'fr' => 'Francés'
-        ], old('language'), [
-            'class' => 'form-control' . ($errors->has('language') ? ' is-invalid' : ''),
-            'required',
-            'id' => 'language'
-        ]) }}
-        @if($errors->has('language'))
-            <div class="invalid-feedback">
-                {{ $errors->first('language') }}
-            </div>
-        @endif
+    {{-- Posición --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Posición</label>
+        <div class="col-md-9">
+            <input type="number" name="position" id="position"
+                value="{{ old('position', 1) }}"
+                class="form-control {{ $errors->has('position') ? 'is-invalid' : '' }}"
+                min="1" required>
+            @error('position')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
     </div>
-</div>
 
-<div class="form-group">
-    <label class="col-md-3 control-label">Código Google Analytics</label>
-    <div class="col-md-9">
-        {{ Form::textarea('follow', old('follow'), [
-            'class' => 'form-control' . ($errors->has('follow') ? ' is-invalid' : ''),
-            'placeholder' => 'Ingrese código de seguimiento',
-            'rows' => 3,
-            'id' => 'follow'
-        ]) }}
-        @if($errors->has('follow'))
-            <div class="invalid-feedback">
-                {{ $errors->first('follow') }}
-            </div>
-        @endif
-    </div>
-</div>
+    {{-- Hidden page_id --}}
+    <input type="hidden" name="page_id" id="page_id"
+        value="{{ old('page_id', request()->segment(3)) }}">
 
-<div class="form-group">
-    <label class="col-md-3 control-label">Pixel Facebook</label>
-    <div class="col-md-9">
-        {{ Form::textarea('pixel', old('pixel'), [
-            'class' => 'form-control' . ($errors->has('pixel') ? ' is-invalid' : ''),
-            'placeholder' => 'Ingrese código de pixel',
-            'rows' => 3,
-            'id' => 'pixel'
-        ]) }}
-        @if($errors->has('pixel'))
-            <div class="invalid-feedback">
-                {{ $errors->first('pixel') }}
-            </div>
-        @endif
+    {{-- Visibilidad --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Visibilidad</label>
+        <div class="col-md-9">
+            <select name="visibility" id="visibility"
+                class="form-control {{ $errors->has('visibility') ? 'is-invalid' : '' }}">
+                <option value="1" {{ old('visibility') == '1' ? 'selected' : '' }}>Visible</option>
+                <option value="0" {{ old('visibility') == '0' ? 'selected' : '' }}>No visible</option>
+            </select>
+            @error('visibility')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
     </div>
-</div>
-                
-                <div class="form-group form-actions">
-                    <div class="col-md-9 col-md-offset-3">
-                        <button type="submit" class="btn btn-sm btn-primary">
-                            <i class="fa fa-angle-right"></i> Crear
-                        </button>
-                        <button type="reset" class="btn btn-sm btn-warning">
-                            <i class="fa fa-repeat"></i> Cancelar
-                        </button>
-                    </div>
-                </div>
-                {{ Form::close() }}
+
+    {{-- Visibilidad Ecommerce --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Visibilidad Ecommerce</label>
+        <div class="col-md-9">
+            <select name="visibility_ecommerce" id="visibility_ecommerce"
+                class="form-control {{ $errors->has('visibility_ecommerce') ? 'is-invalid' : '' }}">
+                <option value="1" {{ old('visibility_ecommerce') == '1' ? 'selected' : '' }}>Visible</option>
+                <option value="0" {{ old('visibility_ecommerce') == '0' ? 'selected' : '' }}>No visible</option>
+            </select>
+            @error('visibility_ecommerce')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+    </div>
+
+    {{-- Visibilidad Blog --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Visibilidad Blog</label>
+        <div class="col-md-9">
+            <select name="visibility_blog" id="visibility_blog"
+                class="form-control {{ $errors->has('visibility_blog') ? 'is-invalid' : '' }}">
+                <option value="1" {{ old('visibility_blog') == '1' ? 'selected' : '' }}>Visible</option>
+                <option value="0" {{ old('visibility_blog') == '0' ? 'selected' : '' }}>No visible</option>
+            </select>
+            @error('visibility_blog')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+    </div>
+
+    {{-- Idioma --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Idioma</label>
+        <div class="col-md-9">
+            <select name="language" id="language" required
+                class="form-control {{ $errors->has('language') ? 'is-invalid' : '' }}">
+                <option value="ne" {{ old('language') == 'ne' ? 'selected' : '' }}>Neutro</option>
+                <option value="es" {{ old('language') == 'es' ? 'selected' : '' }}>Español</option>
+                <option value="en" {{ old('language') == 'en' ? 'selected' : '' }}>Inglés</option>
+                <option value="fr" {{ old('language') == 'fr' ? 'selected' : '' }}>Francés</option>
+            </select>
+            @error('language')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+    </div>
+
+    {{-- Google Analytics --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Código Google Analytics</label>
+        <div class="col-md-9">
+            <textarea name="follow" id="follow" rows="3"
+                class="form-control {{ $errors->has('follow') ? 'is-invalid' : '' }}"
+                placeholder="Ingrese código de seguimiento">{{ old('follow') }}</textarea>
+            @error('follow')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+    </div>
+
+    {{-- Pixel Facebook --}}
+    <div class="form-group">
+        <label class="col-md-3 control-label">Pixel Facebook</label>
+        <div class="col-md-9">
+            <textarea name="pixel" id="pixel" rows="3"
+                class="form-control {{ $errors->has('pixel') ? 'is-invalid' : '' }}"
+                placeholder="Ingrese código de pixel">{{ old('pixel') }}</textarea>
+            @error('pixel')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+    </div>
+
+    {{-- Botones --}}
+    <div class="form-group form-actions">
+        <div class="col-md-9 col-md-offset-3">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="fa fa-angle-right"></i> Crear
+            </button>
+            <button type="reset" class="btn btn-sm btn-warning">
+                <i class="fa fa-repeat"></i> Cancelar
+            </button>
+        </div>
+    </div>
+
+</form>
             </div>
         </div>
     </div>

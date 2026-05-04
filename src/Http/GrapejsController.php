@@ -25,16 +25,19 @@ use Webp;
 class GrapejsController extends Controller
 {
 
- protected $tenantName = null;
+protected ?string $tenantName = null;
+protected bool $isTenant = false;
 
- public function __construct(){
- $this->middleware('auth');
- $hostname = app(\Hyn\Tenancy\Environment::class)->hostname();
-  if($hostname){
-  $fqdn = $hostname->fqdn;
-  $this->tenantName = explode(".", $fqdn)[0];
- }
- }
+public function __construct()
+{
+ 
+
+    // ✅ Stancl Tenancy
+    if (tenancy()->initialized) {
+        $this->isTenant   = true;
+        $this->tenantName = tenant('id');
+    }
+}
 
     /**
      * Display a listing of the resource.
@@ -403,15 +406,10 @@ public function saveComponent(Request $request)
     ]);
 
     // Detectar si estamos en un tenant
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
     
-    if ($website) {
         // Usar modelo del tenant
         $componentModel = \Sitedigitalweb\Pagina\Tenant\Cms_SavedComponent::class;
-    } else {
-        // Usar modelo del sistema central
-        $componentModel = Cms_SavedComponent::class;
-    }
+   
 
     // Guardar usando el modelo Eloquent en lugar de DB::table
     $componentModel::create([
@@ -425,15 +423,10 @@ public function saveComponent(Request $request)
 public function getComponents()
 {
     // Detectar si estamos en un tenant
-    $website = app(\Hyn\Tenancy\Environment::class)->website();
-    
-    if ($website) {
+  
         // Usar modelo del tenant
         $componentModel = \Sitedigitalweb\Pagina\Tenant\Cms_SavedComponent::class;
-    } else {
-        // Usar modelo del sistema central
-        $componentModel = Cms_SavedComponent::class;
-    }
+    
 
     $components = $componentModel::get(['id', 'label', 'content']);
 
@@ -447,36 +440,30 @@ public function getComponents()
     }));
 }
 
-      public function store(Request $request)
+     public function store(Request $request)
 {
     $request->validate([
-        'name' => 'required|string|max:255',
-        'content' => 'required|string'
+        'name'    => 'required|string|max:255',
+        'content' => 'required|string',
     ]);
-    
-    // Obtém o tenant atual de forma mais limpa
-    $tenant = app(\Hyn\Tenancy\Environment::class)->tenant();
-    
-    // Define a classe do modelo baseada no tenant
-    $modelClass = $tenant 
-        ? \Sitedigitalweb\Pagina\Tenant\Cms_SavedComponent::class 
-        : Cms_SavedComponent::class;
-    
-    // Cria o componente usando array fillable
+
+    $modelClass = tenancy()->initialized
+        ? \Sitedigitalweb\Pagina\Tenant\Cms_SavedComponent::class
+        : \Sitedigitalweb\Pagina\Cms_SavedComponent::class;
+
     $component = new $modelClass([
-        'label' => $request->input('name'),
-        'content' => $request->input('content'),
-        'category' => 'Componentes Guardados'
+        'label'    => $request->input('name'),
+        'content'  => $request->input('content'),
+        'category' => 'Componentes Guardados',
     ]);
-    
+
     $component->save();
-    
+
     return response()->json([
-        'success' => true,
-        'component' => $component
+        'success'   => true,
+        'component' => $component,
     ]);
 }
-
 
      public function funel(){
     
