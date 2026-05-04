@@ -11,7 +11,7 @@
     ],
     "autoload": {
     "psr-4": {
-        "AkshayKhale1992\\ModelNote\\": "src/"
+        "sitedigitalweb\\Pagina\\": "src/"
     }
 },
     "minimum-stability": "dev",

@@ -31,7 +31,9 @@
                          </div>
                         @endif
 
-                        {{ Form::open(['method' => 'POST', 'class' => 'form-horizontal', 'url' => 'sd/create']) }}
+                        {{-- FORMULARIO HTML NATIVO --}}
+                        <form method="POST" action="{{ url('sd/create') }}" class="form-horizontal">
+                            @csrf
 
                             {{-- Nombre --}}
                             <div class="form-group row">
@@ -123,7 +125,7 @@
                                 </div>
                             </div>
 
-                            {{-- Plan oculto o dinámico si lo agregas --}}
+                            {{-- Plan oculto --}}
                             <input type="hidden" name="plan" value="1">
 
                             {{-- Botón --}}
@@ -133,7 +135,8 @@
                                 </div>
                             </div>
 
-                        {{ Form::close() }}
+                        </form>
+                        {{-- FIN FORMULARIO --}}
                     </div>
                 </div>
             </div>

@@ -95,85 +95,114 @@ class TenantController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'domain' => 'required|string',
+            'domain' => 'required|string|unique:domains,domain',
         ]);
 
-        $domain       = trim($request->domain);
+        $domain = trim($request->domain);
         $phpFpmSocket = 'unix:/run/php/php8.4-fpm.sock';
-        $certPath     = "/etc/letsencrypt/live/{$domain}";
-
-        // Buscar el tenant por dominio
-        $tenantDomain = \Stancl\Tenancy\Database\Models\Domain::where('domain', $domain)->first();
-
-        if (! $tenantDomain) {
-            return redirect()->back()->with('error', "❌ No se encontró tenant para el dominio {$domain}.");
-        }
-
-        $tenant = Tenant::find($tenantDomain->tenant_id);
+        $certPath = "/etc/letsencrypt/live/{$domain}";
 
         try {
-            // 1. Verificación DNS
+            // 1. Verificar que el dominio apunta al servidor
             $serverIp = trim(shell_exec("hostname -I | awk '{print $1}'"));
-            $dnsIp    = gethostbyname($domain);
+            $dnsIp = gethostbyname($domain);
 
-            if (! $serverIp) {
+            if (!$serverIp) {
                 return redirect()->back()->with('error', '❌ No se pudo obtener la IP del servidor.');
             }
 
-            if ($serverIp !== $dnsIp || ! filter_var($dnsIp, FILTER_VALIDATE_IP)) {
+            if ($serverIp !== $dnsIp || !filter_var($dnsIp, FILTER_VALIDATE_IP)) {
                 return redirect()->back()->with('error', "❌ El dominio no apunta al servidor ({$serverIp}). DNS actual: {$dnsIp}");
             }
 
-            // 2. Emitir certificado con Certbot
-            $issue = new Process([
-                'sudo', 'certbot', 'certonly',
-                '--nginx',
-                '-d', $domain,
-                '-d', "www.{$domain}",
-                '--non-interactive',
-                '--agree-tos',
-                '-m', env('CERTBOT_EMAIL', 'admin@sitedigital.com.co'),
-            ]);
-            $issue->setTimeout(600);
-            $issue->run();
-
-            if (! $issue->isSuccessful()) {
-                throw new ProcessFailedException($issue);
+            // 2. Buscar o crear el tenant
+            $tenantDomain = Domain::where('domain', $domain)->first();
+            
+            if (!$tenantDomain) {
+                // Crear nuevo tenant
+                $tenantId = str_replace(['.', '-'], '_', $domain);
+                $tenant = Tenant::create([
+                    'id' => $tenantId,
+                    'name' => $domain,
+                    'plan' => 'premium',
+                    'status' => 'active',
+                ]);
+                
+                Domain::create([
+                    'tenant_id' => $tenant->id,
+                    'domain' => $domain,
+                    'is_primary' => true,
+                    'is_custom' => true,
+                ]);
+            } else {
+                $tenant = Tenant::find($tenantDomain->tenant_id);
             }
 
-            // 3. Crear config Nginx
+            // 3. Generar certificado SSL con Certbot
+            $issue = Process::run('sudo certbot certonly --nginx -d ' . $domain . ' -d www.' . $domain . ' --non-interactive --agree-tos -m admin@sitedigital.com.co --keep-until-expiring');
+            
+            if (!$issue->successful()) {
+                throw new \Exception($issue->errorOutput());
+            }
+
+            // 4. Crear configuración Nginx para el dominio
             $nginxConfig = $this->buildNginxConfig($domain, $phpFpmSocket, $certPath);
-
-            $filePath = "/etc/nginx/sites-available/{$domain}";
-
-            $writeCfg = new Process(['sudo', 'tee', $filePath]);
-            $writeCfg->setInput($nginxConfig);
-            $writeCfg->run();
-
-            if (! $writeCfg->isSuccessful()) {
-                throw new ProcessFailedException($writeCfg);
+            
+            $configPath = "/etc/nginx/sites-available/{$domain}";
+            file_put_contents($configPath, $nginxConfig);
+            
+            // Crear enlace simbólico
+            if (!file_exists("/etc/nginx/sites-enabled/{$domain}")) {
+                symlink($configPath, "/etc/nginx/sites-enabled/{$domain}");
             }
 
-            $enableCfg = new Process(['sudo', 'ln', '-sf', $filePath, "/etc/nginx/sites-enabled/{$domain}"]);
-            $enableCfg->run();
+            // 5. Recargar Nginx
+            Process::run('sudo systemctl reload nginx');
 
-            if (! $enableCfg->isSuccessful()) {
-                throw new ProcessFailedException($enableCfg);
-            }
+            return redirect()->back()->with('success', "✅ SSL activo para {$domain}. El tenant ha sido creado/actualizado.");
 
-            // 4. Recargar Nginx
-            $reload = new Process(['sudo', 'systemctl', 'reload', 'nginx']);
-            $reload->run();
-
-            if (! $reload->isSuccessful()) {
-                throw new ProcessFailedException($reload);
-            }
-
-            return redirect()->back()->with('success', "✅ SSL activo para {$domain}.");
-
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
+            Log::error('Error al generar SSL: ' . $e->getMessage());
             return redirect()->back()->with('error', '❌ Error: ' . $e->getMessage());
         }
+    }
+
+    protected function buildNginxConfig($domain, $phpFpmSocket, $certPath)
+    {
+        return <<<EOF
+server {
+    listen 80;
+    server_name {$domain} www.{$domain};
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name {$domain} www.{$domain};
+    root /var/www/sitecms/public;
+    index index.php;
+
+    ssl_certificate {$certPath}/fullchain.pem;
+    ssl_certificate_key {$certPath}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location ~ \.php\$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass {$phpFpmSocket};
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+    
+    client_max_body_size 20M;
+}
+EOF;
     }
 
     // ── GRAPE COMPONENTS ──────────────────────────────────
@@ -215,53 +244,43 @@ class TenantController extends Controller
     }
 
     // ── HELPERS ───────────────────────────────────────────
-    protected function buildNginxConfig(string $domain, string $phpFpm, string $certPath): string
-    {
-        return <<<EOL
+    protected function buildNginxConfig($domain, $phpFpmSocket, $certPath)
+{
+    // Si es subdominio de sitekonecta.com, usar el certificado principal
+    if (str_ends_with($domain, '.sitekonecta.com')) {
+        $sslCertPath = "/etc/letsencrypt/live/sitekonecta.com";
+    } else {
+        $sslCertPath = $certPath;
+    }
+    
+    return <<<EOF
 server {
     listen 80;
     server_name {$domain} www.{$domain};
-    return 301 https://{$domain}\$request_uri;
+    return 301 https://\$server_name\$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name www.{$domain};
-    ssl_certificate {$certPath}/fullchain.pem;
-    ssl_certificate_key {$certPath}/privkey.pem;
-    return 301 https://{$domain}\$request_uri;
-}
+    server_name {$domain} www.{$domain};
+    root /var/www/sitecms/public;
+    index index.php;
 
-server {
-    listen 443 ssl http2;
-    server_name {$domain};
-
-    ssl_certificate {$certPath}/fullchain.pem;
-    ssl_certificate_key {$certPath}/privkey.pem;
-
-    root /var/www/html/public;
-    index index.php index.html;
-
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
+    ssl_certificate {$sslCertPath}/fullchain.pem;
+    ssl_certificate_key {$sslCertPath}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
 
     location / {
         try_files \$uri \$uri/ /index.php?\$query_string;
     }
 
-    location ~ \.php$ {
+    location ~ \.php\$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass {$phpFpm};
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-    location ~ /\.ht {
-        deny all;
+        fastcgi_pass {$phpFpmSocket};
     }
 }
-EOL;
-    }
+EOF;
+}
 }
 
 
