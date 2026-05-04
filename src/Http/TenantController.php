@@ -167,7 +167,7 @@ class TenantController extends Controller
         }
     }
 
-    protected function buildNginxConfig($domain, $phpFpmSocket, $certPath)
+    protected function buildNginxConfigs($domain, $phpFpmSocket, $certPath)
     {
         return <<<EOF
 server {
