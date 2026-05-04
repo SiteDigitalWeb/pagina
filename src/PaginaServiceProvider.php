@@ -156,6 +156,7 @@ Route::get('cms-users/export/template', [Sitedigitalweb\Pagina\Http\WebControlle
                 Route::put('/pages/{id}',           [\Sitedigitalweb\Pagina\Http\PaginaController::class, 'update'])->name('pages.update');
                 Route::delete('/pages/{id}',        [\Sitedigitalweb\Pagina\Http\PaginaController::class, 'destroy'])->name('pages.destroy');
                  Route::get('/certificate',     [\Sitedigitalweb\Pagina\Http\TenantController::class, 'certificate']);
+                 Route::post('/tenants', [\Sitedigitalweb\Pagina\Http\TenantController::class, 'store'])->name('tenants.store');
                 // Popups
                 Route::get('/popup',      [\Sitedigitalweb\Pagina\Http\TemplateController::class, 'showForm'])->name('popup.form');
                 Route::post('/popup',     [\Sitedigitalweb\Pagina\Http\TemplateController::class, 'theme'])->name('popup.store');
