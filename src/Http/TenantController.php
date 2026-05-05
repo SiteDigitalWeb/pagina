@@ -22,7 +22,6 @@ class TenantController extends Controller
 
     public function __construct()
     {
-        // Stancl Tenancy — obtener tenant activo
         if (tenancy()->initialized) {
             $this->tenantName = tenant('id');
         }
@@ -68,7 +67,6 @@ class TenantController extends Controller
         $fqdnSlug = $request->fqdn;
         $domain   = sprintf('%s.%s', $fqdnSlug, env('APP_DOMAIN', 'sitekonecta.com'));
 
-        // 1. Crear tenant con Stancl — dispara CreateDatabase + MigrateDatabase
         $tenant = Tenant::create([
             'id'   => $fqdnSlug,
             'name' => $request->name,
@@ -76,7 +74,6 @@ class TenantController extends Controller
 
         $tenant->domains()->create(['domain' => $domain]);
 
-        // 2. Crear usuario admin dentro del tenant
         tenancy()->initialize($tenant);
 
         $user = \App\Models\User::create([
@@ -86,7 +83,6 @@ class TenantController extends Controller
             'pais_id'  => $request->pais_id,
         ]);
 
-        // Asignar rol si existe
         if (class_exists('Spatie\Permission\Models\Role')) {
             $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
             $user->assignRole($role);
@@ -97,21 +93,23 @@ class TenantController extends Controller
         return redirect('/sd/register-tenant')->with('status', 'ok_create');
     }
 
-    // ── CERTIFICADO SSL CON CERTBOT ───────────────────────
+    // ── ACTUALIZAR DOMINIO DEL TENANT EXISTENTE ───────────
     public function store(Request $request)
     {
         $request->validate([
-            'domain' => 'required|string',
+            'tenant_id' => 'required|string',  // ID del tenant (ej: duda)
+            'domain'    => 'required|string',  // Nuevo dominio (ej: ambientizar.com.co)
         ]);
 
-        $domain = trim($request->domain);
+        $tenantId = trim($request->tenant_id);
+        $newDomain = trim($request->domain);
         $phpFpmSocket = 'unix:/run/php/php8.4-fpm.sock';
-        $certPath = "/etc/letsencrypt/live/{$domain}";
+        $certPath = "/etc/letsencrypt/live/{$newDomain}";
 
         try {
             // 1. Verificar que el dominio apunta al servidor
             $serverIp = trim(shell_exec("hostname -I | awk '{print $1}'"));
-            $dnsIp = gethostbyname($domain);
+            $dnsIp = gethostbyname($newDomain);
 
             if (!$serverIp) {
                 return redirect()->back()->with('error', '❌ No se pudo obtener la IP del servidor.');
@@ -121,78 +119,87 @@ class TenantController extends Controller
                 return redirect()->back()->with('error', "❌ El dominio no apunta al servidor ({$serverIp}). DNS actual: {$dnsIp}");
             }
 
-            // 2. Buscar o crear el tenant
-            $tenantDomain = Domain::where('domain', $domain)->first();
+            // 2. Buscar el tenant existente por ID
+            $tenant = Tenant::find($tenantId);
             
-            if (!$tenantDomain) {
-                // Crear nuevo tenant
-                $tenantId = str_replace(['.', '-'], '_', $domain);
-                $tenant = Tenant::firstOrCreate(
-                    ['id' => $tenantId],
-                    [
-                        'name' => $domain,
-                        'plan' => 'premium',
-                        'status' => 'active',
-                    ]
-                );
-                
-                Domain::create([
-                    'tenant_id' => $tenant->id,
-                    'domain' => $domain,
-                    'is_primary' => true,
-                    'is_custom' => true,
-                ]);
-            } else {
-                $tenant = Tenant::find($tenantDomain->tenant_id);
+            if (!$tenant) {
+                return redirect()->back()->with('error', "❌ Tenant '{$tenantId}' no encontrado.");
             }
 
-            // 3. Determinar si es subdominio (usa wildcard) o dominio personalizado
-            $isSubdomain = str_ends_with($domain, '.sitekonecta.com');
+            // 3. Buscar el dominio actual del tenant
+            $oldDomain = Domain::where('tenant_id', $tenantId)->where('is_primary', true)->first();
+            
+            if ($oldDomain) {
+                // Actualizar el dominio existente
+                $oldDomain->domain = $newDomain;
+                $oldDomain->is_custom = !str_ends_with($newDomain, '.sitekonecta.com');
+                $oldDomain->save();
+                $message = "Dominio actualizado: {$oldDomain->getOriginal('domain')} → {$newDomain}";
+            } else {
+                // Crear nuevo dominio si no existe
+                Domain::create([
+                    'tenant_id' => $tenant->id,
+                    'domain' => $newDomain,
+                    'is_primary' => true,
+                    'is_custom' => !str_ends_with($newDomain, '.sitekonecta.com'),
+                ]);
+                $message = "Dominio creado: {$newDomain}";
+            }
+
+            // 4. Generar SSL si es necesario
+            $isSubdomain = str_ends_with($newDomain, '.sitekonecta.com');
             
             if (!$isSubdomain) {
-                // Generar certificado SSL con shell_exec (más confiable)
-                $command = "sudo certbot certonly --nginx -d {$domain} -d www.{$domain} --non-interactive --agree-tos -m admin@sitedigital.com.co 2>&1";
+                $command = "sudo certbot certonly --nginx -d {$newDomain} -d www.{$newDomain} --non-interactive --agree-tos -m admin@sitedigital.com.co 2>&1";
                 $output = shell_exec($command);
                 
                 if (strpos($output, 'Congratulations') !== false) {
                     $sslMessage = "✅ SSL generado correctamente";
                 } else {
                     Log::warning('Certbot output: ' . $output);
-                    $sslMessage = "⚠️ SSL: Verificar manualmente con 'sudo certbot certificates'";
+                    $sslMessage = "⚠️ SSL: Verificar manualmente";
                 }
             } else {
                 $sslMessage = "✅ SSL cubierto por certificado wildcard";
             }
 
-            // 4. Crear configuración Nginx para el dominio (usando sudo)
-            $nginxConfig = $this->buildNginxConfig($domain, $phpFpmSocket, $certPath);
-            $configPath = "/etc/nginx/sites-available/{$domain}";
+            // 5. Configurar Nginx
+            $nginxConfig = $this->buildNginxConfig($newDomain, $phpFpmSocket, $certPath);
+            $configPath = "/etc/nginx/sites-available/{$newDomain}";
             
-            // Usar tee con sudo para escribir
             $writeConfig = new Process(['sudo', 'tee', $configPath]);
             $writeConfig->setInput($nginxConfig);
             $writeConfig->run();
             
+            // Eliminar configuración vieja si existe
+            if ($oldDomain && $oldDomain->getOriginal('domain') !== $newDomain) {
+                $oldConfigPath = "/etc/nginx/sites-available/{$oldDomain->getOriginal('domain')}";
+                if (file_exists($oldConfigPath)) {
+                    shell_exec("sudo rm -f {$oldConfigPath}");
+                    shell_exec("sudo rm -f /etc/nginx/sites-enabled/" . basename($oldConfigPath));
+                }
+            }
+            
             // Crear enlace simbólico
-            $linkPath = "/etc/nginx/sites-enabled/{$domain}";
+            $linkPath = "/etc/nginx/sites-enabled/{$newDomain}";
             if (!file_exists($linkPath)) {
                 $linkProcess = new Process(['sudo', 'ln', '-sf', $configPath, $linkPath]);
                 $linkProcess->run();
             }
 
-            // 5. Recargar Nginx
+            // 6. Recargar Nginx
             $reload = new Process(['sudo', 'systemctl', 'reload', 'nginx']);
             $reload->run();
 
-            return redirect()->back()->with('success', "{$sslMessage} para {$domain}. Tenant configurado correctamente.");
+            return redirect()->back()->with('success', "✅ {$message}. {$sslMessage}");
 
         } catch (\Exception $e) {
-            Log::error('Error general: ' . $e->getMessage());
+            Log::error('Error: ' . $e->getMessage());
             return redirect()->back()->with('error', '❌ Error: ' . $e->getMessage());
         }
     }
 
-    // ── GENERAR SSL MANUALMENTE (OPCIONAL) ────────────────
+    // ── GENERAR SSL MANUALMENTE ───────────────────────────
     public function generateSSL(Request $request)
     {
         $request->validate([
@@ -252,7 +259,6 @@ class TenantController extends Controller
     // ── HELPERS ───────────────────────────────────────────
     protected function buildNginxConfig($domain, $phpFpmSocket, $certPath)
     {
-        // Si es subdominio de sitekonecta.com, usar el certificado wildcard
         if (str_ends_with($domain, '.sitekonecta.com')) {
             $sslCertPath = "/etc/letsencrypt/live/sitekonecta.com-0001";
         } else {
