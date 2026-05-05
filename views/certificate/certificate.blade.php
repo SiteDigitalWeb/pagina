@@ -33,7 +33,7 @@
     @endif
 
     <!-- Formulario -->
-    <form action="{{ route('tenants.store') }}" method="POST">
+    <form action="{{ route('tenants.cstore') }}" method="POST">
         @csrf
         <div style="margin-bottom:10px;">
             <label for="domain">Dominio del Tenant:</label><br>

@@ -8,9 +8,11 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Sitedigitalweb\Pagina\Cms_Pais;
 use Sitedigitalweb\Pagina\Cms_Template;
+use Stancl\Tenancy\Database\Models\Domain;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -138,11 +140,21 @@ class TenantController extends Controller
                 $tenant = Tenant::find($tenantDomain->tenant_id);
             }
 
-            // 3. Generar certificado SSL con Certbot
-            $issue = Process::run('sudo certbot certonly --nginx -d ' . $domain . ' -d www.' . $domain . ' --non-interactive --agree-tos -m admin@sitedigital.com.co --keep-until-expiring');
-            
-            if (!$issue->successful()) {
-                throw new \Exception($issue->errorOutput());
+            // 3. Generar certificado SSL con Certbot (CORREGIDO - usar Process correctamente)
+            $process = new Process([
+                'sudo', 'certbot', 'certonly', '--nginx',
+                '-d', $domain,
+                '-d', "www.{$domain}",
+                '--non-interactive',
+                '--agree-tos',
+                '-m', 'admin@sitedigital.com.co',
+                '--keep-until-expiring'
+            ]);
+            $process->setTimeout(600);
+            $process->run();
+
+            if (!$process->isSuccessful()) {
+                throw new ProcessFailedException($process);
             }
 
             // 4. Crear configuración Nginx para el dominio
@@ -156,53 +168,19 @@ class TenantController extends Controller
                 symlink($configPath, "/etc/nginx/sites-enabled/{$domain}");
             }
 
-            // 5. Recargar Nginx
-            Process::run('sudo systemctl reload nginx');
+            // 5. Recargar Nginx (CORREGIDO)
+            $reload = new Process(['sudo', 'systemctl', 'reload', 'nginx']);
+            $reload->run();
 
             return redirect()->back()->with('success', "✅ SSL activo para {$domain}. El tenant ha sido creado/actualizado.");
 
-        } catch (\Exception $e) {
+        } catch (ProcessFailedException $e) {
             Log::error('Error al generar SSL: ' . $e->getMessage());
+            return redirect()->back()->with('error', '❌ Error SSL: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error('Error general: ' . $e->getMessage());
             return redirect()->back()->with('error', '❌ Error: ' . $e->getMessage());
         }
-    }
-
-    protected function buildNginxConfigs($domain, $phpFpmSocket, $certPath)
-    {
-        return <<<EOF
-server {
-    listen 80;
-    server_name {$domain} www.{$domain};
-    return 301 https://\$server_name\$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name {$domain} www.{$domain};
-    root /var/www/sitecms/public;
-    index index.php;
-
-    ssl_certificate {$certPath}/fullchain.pem;
-    ssl_certificate_key {$certPath}/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-
-    location / {
-        try_files \$uri \$uri/ /index.php?\$query_string;
-    }
-
-    location ~ \.php\$ {
-        include snippets/fastcgi-php.conf;
-        fastcgi_pass {$phpFpmSocket};
-    }
-
-    location ~ /\.ht {
-        deny all;
-    }
-    
-    client_max_body_size 20M;
-}
-EOF;
     }
 
     // ── GRAPE COMPONENTS ──────────────────────────────────
@@ -214,7 +192,7 @@ EOF;
 
         $cmsTemplate = $templateQuery->first();
 
-        if (! $cmsTemplate) {
+        if (!$cmsTemplate) {
             return response()->json(['error' => 'No active template found'], 404);
         }
 
@@ -245,15 +223,15 @@ EOF;
 
     // ── HELPERS ───────────────────────────────────────────
     protected function buildNginxConfig($domain, $phpFpmSocket, $certPath)
-{
-    // Si es subdominio de sitekonecta.com, usar el certificado principal
-    if (str_ends_with($domain, '.sitekonecta.com')) {
-        $sslCertPath = "/etc/letsencrypt/live/sitekonecta.com";
-    } else {
-        $sslCertPath = $certPath;
-    }
-    
-    return <<<EOF
+    {
+        // Si es subdominio de sitekonecta.com, usar el certificado principal
+        if (str_ends_with($domain, '.sitekonecta.com')) {
+            $sslCertPath = "/etc/letsencrypt/live/sitekonecta.com-0001";
+        } else {
+            $sslCertPath = $certPath;
+        }
+        
+        return <<<EOF
 server {
     listen 80;
     server_name {$domain} www.{$domain};
@@ -280,9 +258,5 @@ server {
     }
 }
 EOF;
+    }
 }
-}
-
-
-
-
