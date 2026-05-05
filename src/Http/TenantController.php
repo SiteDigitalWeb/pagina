@@ -15,6 +15,7 @@ use Sitedigitalweb\Pagina\Cms_Template;
 use Stancl\Tenancy\Database\Models\Domain;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
+use Database\Seeders\TenantSeeder;
 
 class TenantController extends Controller
 {
@@ -42,56 +43,64 @@ class TenantController extends Controller
 
     // ── CREAR TENANT ──────────────────────────────────────
     public function create(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'name'                  => 'required|string|max:255',
-            'email'                 => 'required|email|unique:users,email',
-            'fqdn'                  => ['required', 'regex:/^[a-zA-Z0-9\-]+$/', 'unique:tenants,id'],
-            'password'              => 'required|string|min:8|same:password_confirmation',
-            'password_confirmation' => 'required|string|min:8',
-            'date'                  => 'required|date',
-            'plan'                  => 'required|integer',
-        ], [
-            'email.unique'  => 'Este correo ya está registrado.',
-            'fqdn.regex'    => 'El hostname solo puede contener letras, números y guiones.',
-            'fqdn.unique'   => 'Este hostname ya está en uso.',
-            'password.same' => 'Las contraseñas no coinciden.',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'name'                  => 'required|string|max:255',
+        'email'                 => 'required|email|unique:users,email',
+        'fqdn'                  => ['required', 'regex:/^[a-zA-Z0-9\-]+$/', 'unique:tenants,id'],
+        'password'              => 'required|string|min:8|same:password_confirmation',
+        'password_confirmation' => 'required|string|min:8',
+        'date'                  => 'required|date',
+        'plan'                  => 'required|integer',
+    ], [
+        'email.unique'  => 'Este correo ya está registrado.',
+        'fqdn.regex'    => 'El hostname solo puede contener letras, números y guiones.',
+        'fqdn.unique'   => 'Este hostname ya está en uso.',
+        'password.same' => 'Las contraseñas no coinciden.',
+    ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $fqdnSlug = $request->fqdn;
-        $domain   = sprintf('%s.%s', $fqdnSlug, env('APP_DOMAIN', 'sitekonecta.com'));
-
-        $tenant = Tenant::create([
-            'id'   => $fqdnSlug,
-            'name' => $request->name,
-        ]);
-
-        $tenant->domains()->create(['domain' => $domain]);
-
-        tenancy()->initialize($tenant);
-
-        $user = \App\Models\User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
-            'pais_id'  => $request->pais_id,
-        ]);
-
-        if (class_exists('Spatie\Permission\Models\Role')) {
-            $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
-            $user->assignRole($role);
-        }
-
-        tenancy()->end();
-
-        return redirect('/sd/register-tenant')->with('status', 'ok_create');
+    if ($validator->fails()) {
+        return redirect()->back()
+            ->withErrors($validator)
+            ->withInput();
     }
+
+    $fqdnSlug = $request->fqdn;
+    $domain   = sprintf('%s.%s', $fqdnSlug, env('APP_DOMAIN', 'sitekonecta.com'));
+
+    // 1. Crear tenant
+    $tenant = Tenant::create([
+        'id'   => $fqdnSlug,
+        'name' => $request->name,
+    ]);
+
+    $tenant->domains()->create(['domain' => $domain]);
+
+    // 2. 🔥 INICIALIZAR TENANT Y EJECUTAR SEEDER 🔥
+    tenancy()->initialize($tenant);
+    
+    // Ejecutar TenantSeeder para insertar datos iniciales
+    $seeder = new \Database\Seeders\TenantSeeder();
+    $seeder->run();
+    
+    // 3. Crear usuario admin dentro del tenant
+    $user = \App\Models\User::create([
+        'name'     => $request->name,
+        'email'    => $request->email,
+        'password' => Hash::make($request->password),
+        'pais_id'  => $request->pais_id,
+    ]);
+
+    if (class_exists('Spatie\Permission\Models\Role')) {
+        $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
+        $user->assignRole($role);
+    }
+
+    // 4. Salir del tenant
+    tenancy()->end();
+
+    return redirect('/sd/register-tenant')->with('status', 'ok_create');
+}
 
     // ── ACTUALIZAR DOMINIO DEL TENANT EXISTENTE ───────────
     // ── ACTUALIZAR DOMINIO DEL TENANT EXISTENTE ───────────
