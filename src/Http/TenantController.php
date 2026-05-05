@@ -94,110 +94,101 @@ class TenantController extends Controller
     }
 
     // ── ACTUALIZAR DOMINIO DEL TENANT EXISTENTE ───────────
-    public function store(Request $request)
-    {
-        $request->validate([
-            'tenant_id' => 'required|string',  // ID del tenant (ej: duda)
-            'domain'    => 'required|string',  // Nuevo dominio (ej: ambientizar.com.co)
-        ]);
+    // ── ACTUALIZAR DOMINIO DEL TENANT EXISTENTE ───────────
+public function store(Request $request)
+{
+    $request->validate([
+        'domain' => 'required|string',
+    ]);
 
-        $tenantId = trim($request->tenant_id);
-        $newDomain = trim($request->domain);
-        $phpFpmSocket = 'unix:/run/php/php8.4-fpm.sock';
-        $certPath = "/etc/letsencrypt/live/{$newDomain}";
+    $newDomain = trim($request->domain);
+    $phpFpmSocket = 'unix:/run/php/php8.4-fpm.sock';
+    $certPath = "/etc/letsencrypt/live/{$newDomain}";
 
-        try {
-            // 1. Verificar que el dominio apunta al servidor
-            $serverIp = trim(shell_exec("hostname -I | awk '{print $1}'"));
-            $dnsIp = gethostbyname($newDomain);
+    try {
+        // 1. Verificar que el dominio apunta al servidor
+        $serverIp = trim(shell_exec("hostname -I | awk '{print $1}'"));
+        $dnsIp = gethostbyname($newDomain);
 
-            if (!$serverIp) {
-                return redirect()->back()->with('error', '❌ No se pudo obtener la IP del servidor.');
-            }
+        if (!$serverIp) {
+            return redirect()->back()->with('error', '❌ No se pudo obtener la IP del servidor.');
+        }
 
-            if ($serverIp !== $dnsIp || !filter_var($dnsIp, FILTER_VALIDATE_IP)) {
-                return redirect()->back()->with('error', "❌ El dominio no apunta al servidor ({$serverIp}). DNS actual: {$dnsIp}");
-            }
+        if ($serverIp !== $dnsIp || !filter_var($dnsIp, FILTER_VALIDATE_IP)) {
+            return redirect()->back()->with('error', "❌ El dominio no apunta al servidor ({$serverIp}). DNS actual: {$dnsIp}");
+        }
 
-            // 2. Buscar el tenant existente por ID
+        // 2. Buscar el tenant por el dominio ORIGINAL (si existe)
+        // Primero, intentar encontrar un tenant que tenga el dominio que queremos reemplazar
+        $oldDomainRecord = Domain::where('domain', $newDomain)->first();
+        
+        if ($oldDomainRecord) {
+            // El dominio ya existe, actualizar ese tenant
+            $tenant = Tenant::find($oldDomainRecord->tenant_id);
+            $message = "Dominio actualizado para tenant: {$tenant->id}";
+        } else {
+            // Buscar el tenant 'duda' específicamente (o el que corresponda)
+            // Puedes cambiar 'duda' por el ID del tenant que quieras actualizar
+            $tenantId = $request->input('tenant_id', 'duda'); // Si no viene, usa 'duda'
             $tenant = Tenant::find($tenantId);
             
             if (!$tenant) {
                 return redirect()->back()->with('error', "❌ Tenant '{$tenantId}' no encontrado.");
             }
-
-            // 3. Buscar el dominio actual del tenant
-            $oldDomain = Domain::where('tenant_id', $tenantId)->where('is_primary', true)->first();
             
-            if ($oldDomain) {
-                // Actualizar el dominio existente
-                $oldDomain->domain = $newDomain;
-                $oldDomain->is_custom = !str_ends_with($newDomain, '.sitekonecta.com');
-                $oldDomain->save();
-                $message = "Dominio actualizado: {$oldDomain->getOriginal('domain')} → {$newDomain}";
-            } else {
-                // Crear nuevo dominio si no existe
-                Domain::create([
-                    'tenant_id' => $tenant->id,
-                    'domain' => $newDomain,
-                    'is_primary' => true,
-                    'is_custom' => !str_ends_with($newDomain, '.sitekonecta.com'),
-                ]);
-                $message = "Dominio creado: {$newDomain}";
-            }
-
-            // 4. Generar SSL si es necesario
-            $isSubdomain = str_ends_with($newDomain, '.sitekonecta.com');
-            
-            if (!$isSubdomain) {
-                $command = "sudo certbot certonly --nginx -d {$newDomain} -d www.{$newDomain} --non-interactive --agree-tos -m admin@sitedigital.com.co 2>&1";
-                $output = shell_exec($command);
-                
-                if (strpos($output, 'Congratulations') !== false) {
-                    $sslMessage = "✅ SSL generado correctamente";
-                } else {
-                    Log::warning('Certbot output: ' . $output);
-                    $sslMessage = "⚠️ SSL: Verificar manualmente";
-                }
-            } else {
-                $sslMessage = "✅ SSL cubierto por certificado wildcard";
-            }
-
-            // 5. Configurar Nginx
-            $nginxConfig = $this->buildNginxConfig($newDomain, $phpFpmSocket, $certPath);
-            $configPath = "/etc/nginx/sites-available/{$newDomain}";
-            
-            $writeConfig = new Process(['sudo', 'tee', $configPath]);
-            $writeConfig->setInput($nginxConfig);
-            $writeConfig->run();
-            
-            // Eliminar configuración vieja si existe
-            if ($oldDomain && $oldDomain->getOriginal('domain') !== $newDomain) {
-                $oldConfigPath = "/etc/nginx/sites-available/{$oldDomain->getOriginal('domain')}";
-                if (file_exists($oldConfigPath)) {
-                    shell_exec("sudo rm -f {$oldConfigPath}");
-                    shell_exec("sudo rm -f /etc/nginx/sites-enabled/" . basename($oldConfigPath));
-                }
-            }
-            
-            // Crear enlace simbólico
-            $linkPath = "/etc/nginx/sites-enabled/{$newDomain}";
-            if (!file_exists($linkPath)) {
-                $linkProcess = new Process(['sudo', 'ln', '-sf', $configPath, $linkPath]);
-                $linkProcess->run();
-            }
-
-            // 6. Recargar Nginx
-            $reload = new Process(['sudo', 'systemctl', 'reload', 'nginx']);
-            $reload->run();
-
-            return redirect()->back()->with('success', "✅ {$message}. {$sslMessage}");
-
-        } catch (\Exception $e) {
-            Log::error('Error: ' . $e->getMessage());
-            return redirect()->back()->with('error', '❌ Error: ' . $e->getMessage());
+            // Crear nuevo registro de dominio
+            Domain::create([
+                'tenant_id' => $tenant->id,
+                'domain' => $newDomain,
+                'is_primary' => true,
+                'is_custom' => !str_ends_with($newDomain, '.sitekonecta.com'),
+            ]);
+            $message = "Dominio agregado al tenant: {$tenant->id}";
         }
+
+        // 3. Generar SSL si es necesario
+        $isSubdomain = str_ends_with($newDomain, '.sitekonecta.com');
+        
+        if (!$isSubdomain) {
+            $command = "sudo certbot certonly --nginx -d {$newDomain} -d www.{$newDomain} --non-interactive --agree-tos -m admin@sitedigital.com.co 2>&1";
+            $output = shell_exec($command);
+            
+            if (strpos($output, 'Congratulations') !== false) {
+                $sslMessage = "✅ SSL generado correctamente";
+            } else {
+                Log::warning('Certbot output: ' . $output);
+                $sslMessage = "⚠️ SSL: Verificar manualmente";
+            }
+        } else {
+            $sslMessage = "✅ SSL cubierto por certificado wildcard";
+        }
+
+        // 4. Configurar Nginx
+        $nginxConfig = $this->buildNginxConfig($newDomain, $phpFpmSocket, $certPath);
+        $configPath = "/etc/nginx/sites-available/{$newDomain}";
+        
+        $writeConfig = new Process(['sudo', 'tee', $configPath]);
+        $writeConfig->setInput($nginxConfig);
+        $writeConfig->run();
+        
+        // Crear enlace simbólico
+        $linkPath = "/etc/nginx/sites-enabled/{$newDomain}";
+        if (!file_exists($linkPath)) {
+            $linkProcess = new Process(['sudo', 'ln', '-sf', $configPath, $linkPath]);
+            $linkProcess->run();
+        }
+
+        // 5. Recargar Nginx
+        $reload = new Process(['sudo', 'systemctl', 'reload', 'nginx']);
+        $reload->run();
+
+        return redirect()->back()->with('success', "✅ {$message}. {$sslMessage}");
+
+    } catch (\Exception $e) {
+        Log::error('Error: ' . $e->getMessage());
+        return redirect()->back()->with('error', '❌ Error: ' . $e->getMessage());
     }
+}
 
     // ── GENERAR SSL MANUALMENTE ───────────────────────────
     public function generateSSL(Request $request)
