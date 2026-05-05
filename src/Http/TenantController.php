@@ -95,18 +95,34 @@ class TenantController extends Controller
 
     // ── ACTUALIZAR DOMINIO DEL TENANT EXISTENTE ───────────
     // ── ACTUALIZAR DOMINIO DEL TENANT EXISTENTE ───────────
+// ── ACTUALIZAR DOMINIO DEL TENANT ACTUAL ───────────
 public function store(Request $request)
 {
     $request->validate([
         'domain' => 'required|string',
     ]);
 
+    // 🔥 IDENTIFICAR TENANT ACTUAL
+    if (tenancy()->initialized) {
+        $tenantId = tenant('id');
+    } else {
+        // Si no hay tenant inicializado, intentar por dominio actual
+        $currentHost = $request->getHost();
+        $domainRecord = Domain::where('domain', $currentHost)->first();
+        
+        if ($domainRecord) {
+            $tenantId = $domainRecord->tenant_id;
+        } else {
+            return redirect()->back()->with('error', '❌ No se pudo identificar el tenant actual.');
+        }
+    }
+
     $newDomain = trim($request->domain);
     $phpFpmSocket = 'unix:/run/php/php8.4-fpm.sock';
     $certPath = "/etc/letsencrypt/live/{$newDomain}";
 
     try {
-        // 1. Verificar que el dominio apunta al servidor
+        // 1. Verificar DNS
         $serverIp = trim(shell_exec("hostname -I | awk '{print $1}'"));
         $dnsIp = gethostbyname($newDomain);
 
@@ -118,35 +134,33 @@ public function store(Request $request)
             return redirect()->back()->with('error', "❌ El dominio no apunta al servidor ({$serverIp}). DNS actual: {$dnsIp}");
         }
 
-        // 2. Buscar el tenant por el dominio ORIGINAL (si existe)
-        // Primero, intentar encontrar un tenant que tenga el dominio que queremos reemplazar
-        $oldDomainRecord = Domain::where('domain', $newDomain)->first();
+        // 2. Buscar el tenant actual
+        $tenant = Tenant::find($tenantId);
         
-        if ($oldDomainRecord) {
-            // El dominio ya existe, actualizar ese tenant
-            $tenant = Tenant::find($oldDomainRecord->tenant_id);
-            $message = "Dominio actualizado para tenant: {$tenant->id}";
+        if (!$tenant) {
+            return redirect()->back()->with('error', "❌ Tenant '{$tenantId}' no encontrado.");
+        }
+
+        // 3. Actualizar el dominio principal
+        $primaryDomain = Domain::where('tenant_id', $tenantId)->where('is_primary', true)->first();
+        
+        if ($primaryDomain) {
+            $oldDomain = $primaryDomain->domain;
+            $primaryDomain->domain = $newDomain;
+            $primaryDomain->is_custom = !str_ends_with($newDomain, '.sitekonecta.com');
+            $primaryDomain->save();
+            $message = "Dominio actualizado: {$oldDomain} → {$newDomain}";
         } else {
-            // Buscar el tenant 'duda' específicamente (o el que corresponda)
-            // Puedes cambiar 'duda' por el ID del tenant que quieras actualizar
-            $tenantId = $request->input('tenant_id', 'duda'); // Si no viene, usa 'duda'
-            $tenant = Tenant::find($tenantId);
-            
-            if (!$tenant) {
-                return redirect()->back()->with('error', "❌ Tenant '{$tenantId}' no encontrado.");
-            }
-            
-            // Crear nuevo registro de dominio
             Domain::create([
                 'tenant_id' => $tenant->id,
                 'domain' => $newDomain,
                 'is_primary' => true,
                 'is_custom' => !str_ends_with($newDomain, '.sitekonecta.com'),
             ]);
-            $message = "Dominio agregado al tenant: {$tenant->id}";
+            $message = "Dominio creado: {$newDomain}";
         }
 
-        // 3. Generar SSL si es necesario
+        // 4. Generar SSL si es necesario
         $isSubdomain = str_ends_with($newDomain, '.sitekonecta.com');
         
         if (!$isSubdomain) {
@@ -163,7 +177,7 @@ public function store(Request $request)
             $sslMessage = "✅ SSL cubierto por certificado wildcard";
         }
 
-        // 4. Configurar Nginx
+        // 5. Configurar Nginx
         $nginxConfig = $this->buildNginxConfig($newDomain, $phpFpmSocket, $certPath);
         $configPath = "/etc/nginx/sites-available/{$newDomain}";
         
@@ -171,14 +185,13 @@ public function store(Request $request)
         $writeConfig->setInput($nginxConfig);
         $writeConfig->run();
         
-        // Crear enlace simbólico
         $linkPath = "/etc/nginx/sites-enabled/{$newDomain}";
         if (!file_exists($linkPath)) {
             $linkProcess = new Process(['sudo', 'ln', '-sf', $configPath, $linkPath]);
             $linkProcess->run();
         }
 
-        // 5. Recargar Nginx
+        // 6. Recargar Nginx
         $reload = new Process(['sudo', 'systemctl', 'reload', 'nginx']);
         $reload->run();
 
