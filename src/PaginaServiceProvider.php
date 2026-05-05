@@ -70,6 +70,7 @@ Route::get('cms-users/export/template', [Sitedigitalweb\Pagina\Http\WebControlle
         // En routes/web.php — cambiar la ruta raíz del tenant
          Route::get('/', [\Sitedigitalweb\Pagina\Http\TemplateController::class, 'page'])
          ->defaults('page', null);
+         Route::get('/{page}', [\Sitedigitalweb\Pagina\Http\TemplateController::class, 'pages']);
         Route::get('/tenant-styles.css', [\Sitedigitalweb\Pagina\Http\TemplateController::class, 'getTenantCss']);
         Route::get('/sd/themes.css', [\Sitedigitalweb\Pagina\Http\TemplateController::class, 'themeCss'])->name('theme.css');
         Route::post('/cms/submit',   [\Sitedigitalweb\Pagina\Http\WebController::class, 'submitForm']);
@@ -177,7 +178,7 @@ Route::get('cms-users/export/template', [Sitedigitalweb\Pagina\Http\WebControlle
             });
 
             // ⚠️ Esta ruta al final siempre — captura cualquier /{page}
-            Route::get('/{page}', [\Sitedigitalweb\Pagina\Http\TemplateController::class, 'pages']);
+            //Route::get('/{page}', [\Sitedigitalweb\Pagina\Http\TemplateController::class, 'pages']);
         });
     }
 
