@@ -2,12 +2,13 @@
 
 namespace Sitedigitalweb\Pagina;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
+
 
 class Cms_SavedComponent extends Model
 {
-
+     use BelongsToTenant;
     protected $table = 'cms_components'; // nombre de la tabla en la BD
-    protected $fillable = ['label', 'content', 'category'];
+    protected $fillable = ['tenant_id','label', 'content', 'category'];
 }
